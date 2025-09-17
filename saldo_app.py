@@ -195,9 +195,10 @@ if st.button("Simula Investimento"):
         if "metrics" in locals() and "Rendimento atteso annuo" in metrics:
             r = metrics["Rendimento atteso annuo"]
 
-        valori = [initial * ((1 + r) ** t) for t in range(1, years + 1)]
+        valori = [initial * (((1 + r) ** t - 1) / r) for t in range(1, years + 1)]
         investito = [initial * t for t in range(1, years + 1)]
         rendimento = [v - i for v, i in zip(valori, investito)]
+
 
         final_value = valori[-1]
 
@@ -228,6 +229,7 @@ if st.button("Simula Investimento"):
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
 
 
 
