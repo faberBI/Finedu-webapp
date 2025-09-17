@@ -107,6 +107,7 @@ if uploaded_file:
     # Saldo annuale
     st.header("Saldo Annuale")
     saldo_annuale = saldo_mensile.sum()
+    st.session_state["saldo_annuale"] = saldo_annuale
     st.write(f"Saldo annuale: €{saldo_annuale:,.2f}")
 
 
@@ -186,6 +187,7 @@ st.subheader("Simulazione Investimento")
 years = st.slider("Anni di investimento", 1, 30, 5)
 
 if st.button("Simula Investimento"):
+    saldo_annuale = st.session_state["saldo_annuale"]
     if 'saldo_annuale' not in st.session_state:
         st.error("⚠️ Carica prima il file finanziario per calcolare il saldo annuale.")
     else:
@@ -230,6 +232,7 @@ if st.button("Simula Investimento"):
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
 
 
 
