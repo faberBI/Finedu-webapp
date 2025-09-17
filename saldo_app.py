@@ -111,7 +111,7 @@ if uploaded_file:
 
 
 # =====================
-# Simulazione Portafoglio con funzioni
+# Simulazione Portafoglio con bottone
 # =====================
 st.header("Simulazione Portafoglio Investimenti")
 
@@ -144,49 +144,51 @@ if selected_tickers:
         w = st.slider(f"{ticker} (%)", 0, 100, 10)
         weights.append(w / 100)
 
-    # Normalizza i pesi
-    weights = np.array(weights)
-    if weights.sum() == 0:
-        st.error("I pesi non possono essere tutti 0")
-    else:
-        weights = weights / weights.sum()
+    # Bottone per costruire portafoglio
+    if st.button("Costruisci Portafoglio"):
+        weights = np.array(weights)
+        if weights.sum() == 0:
+            st.error("I pesi non possono essere tutti 0")
+        else:
+            weights = weights / weights.sum()
 
-        # Download dati storici e calcolo rendimenti
-        data = download_data(selected_tickers)
-        returns_df = calculate_returns(data)
+            # Download dati storici e calcolo rendimenti
+            data = download_data(selected_tickers)
+            returns_df = calculate_returns(data)
 
-        # Metriche portafoglio
-        metrics = portfolio_metrics(weights, returns_df)
-        st.subheader("Metriche Portafoglio")
-        for key, value in metrics.items():
-            if key == "Correlation Matrix":
-                continue
-            # Formattazione percentuale o numerica
-            if "Ratio" in key or key == "Max Drawdown":
-                st.write(f"{key}: {value:.2f}")
-            else:
-                st.write(f"{key}: {value:.2%}")
+            # Metriche portafoglio
+            metrics = portfolio_metrics(weights, returns_df)
+            st.subheader("Metriche Portafoglio")
+            for key, value in metrics.items():
+                if key == "Correlation Matrix":
+                    continue
+                if "Ratio" in key or key == "Max Drawdown":
+                    st.write(f"{key}: {value:.2f}")
+                else:
+                    st.write(f"{key}: {value:.2%}")
 
-        # Grafici Portafoglio
-        st.subheader("Grafici Portafoglio")
-        st.plotly_chart(plot_cumulative_returns(weights, returns_df))
-        st.plotly_chart(plot_return_distribution(weights, returns_df))
-        st.plotly_chart(plot_weights(weights, selected_tickers))
-        st.plotly_chart(plot_drawdown(weights, returns_df))
-        st.plotly_chart(plot_rolling_volatility(weights, returns_df))
-        st.plotly_chart(plot_correlation_heatmap(metrics["Correlation Matrix"]))
-        st.plotly_chart(plot_risk_contribution(weights, returns_df))
+            # Grafici Portafoglio
+            st.subheader("Grafici Portafoglio")
+            st.plotly_chart(plot_cumulative_returns(weights, returns_df))
+            st.plotly_chart(plot_return_distribution(weights, returns_df))
+            st.plotly_chart(plot_weights(weights, selected_tickers))
+            st.plotly_chart(plot_drawdown(weights, returns_df))
+            st.plotly_chart(plot_rolling_volatility(weights, returns_df))
+            st.plotly_chart(plot_correlation_heatmap(metrics["Correlation Matrix"]))
+            st.plotly_chart(plot_risk_contribution(weights, returns_df))
 
-        # Simulazione crescita saldo investito
-        if 'saldo_annuale' in st.session_state:
+            # Salva saldo_annuale nello session_state se non esiste
+            if 'saldo_annuale' not in st.session_state:
+                st.session_state.saldo_annuale = saldo_annuale
+
+            # Simulazione crescita saldo investito
             st.subheader("Simulazione Investimento")
             years = st.slider("Anni di investimento", 1, 30, 5)
             final_value = simulate_investment(st.session_state.saldo_annuale, metrics["Rendimento atteso annuo"], years)
             st.write(f"Se investi il saldo annuale (€{st.session_state.saldo_annuale:,.2f}) per {years} anni, il valore finale stimato sarà: €{final_value:,.2f}")
-        else:
-            st.warning("Calcola prima il saldo annuale dal report finanziario.")
 else:
     st.info("Seleziona almeno un asset class o inserisci dei ticker per creare il portafoglio.")
+
 
 
 
