@@ -177,19 +177,57 @@ if selected_tickers:
             st.plotly_chart(plot_correlation_heatmap(metrics["Correlation Matrix"]))
             st.plotly_chart(plot_risk_contribution(weights, returns_df))
 
-            # Salva saldo_annuale nello session_state se non esiste
-            if 'saldo_annuale' not in st.session_state:
-                st.session_state.saldo_annuale = saldo_annuale
+# =====================
+# Simulazione crescita saldo investito
+# =====================
+st.subheader("Simulazione Investimento")
 
-            # Simulazione crescita saldo investito
-            st.subheader("Simulazione Investimento")
-            years = st.slider("Anni di investimento", 1, 30, 5)
-            final_value = simulate_investment(st.session_state.saldo_annuale, metrics["Rendimento atteso annuo"], years)
-            st.write(f"Se investi il saldo annuale (€{st.session_state.saldo_annuale:,.2f}) per {years} anni, il valore finale stimato sarà: €{final_value:,.2f}")
-else:
-    st.info("Seleziona almeno un asset class o inserisci dei ticker per creare il portafoglio.")
+years = st.slider("Anni di investimento", 1, 30, 5)
 
+if st.button("Simula Investimento"):
+    if 'saldo_annuale' not in st.session_state:
+        st.error("⚠️ Carica prima il file finanziario per calcolare il saldo annuale.")
+    else:
+        # Capitalizzazione composta
+        initial = st.session_state.saldo_annuale
+        # Uso rendimento atteso dal portafoglio se disponibile, altrimenti default 5%
+        r = 0.05
+        if "metrics" in locals() and "Rendimento atteso annuo" in metrics:
+            r = metrics["Rendimento atteso annuo"]
 
+        valori = [initial * ((1 + r) ** t) for t in range(1, years + 1)]
+        investito = [initial * t for t in range(1, years + 1)]
+        rendimento = [v - i for v, i in zip(valori, investito)]
+
+        final_value = valori[-1]
+
+        st.write(f"💰 Se investi il saldo annuale (€{initial:,.2f}) per {years} anni, "
+                 f"il valore finale stimato sarà: €{final_value:,.2f}")
+
+        # Grafico istogramma stacked
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=list(range(1, years + 1)),
+            y=investito,
+            name="Capitale Investito",
+            marker_color="royalblue"
+        ))
+        fig.add_trace(go.Bar(
+            x=list(range(1, years + 1)),
+            y=rendimento,
+            name="Rendimento Maturato",
+            marker_color="seagreen"
+        ))
+
+        fig.update_layout(
+            barmode="stack",
+            title="Crescita del portafoglio (Capitale Investito + Rendimento)",
+            xaxis_title="Anno",
+            yaxis_title="Valore (€)",
+            template="plotly_white"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 
 
