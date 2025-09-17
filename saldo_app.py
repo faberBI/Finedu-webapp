@@ -40,7 +40,11 @@ if uploaded_file:
         if uploaded_file.name.endswith('.xlsx'):
             df = pd.read_excel(uploaded_file, engine='openpyxl')
         else:
-            df = pd.read_csv(uploaded_file)
+            # Proviamo prima con UTF-8, altrimenti fallback a latin-1
+            try:
+                df = pd.read_csv(uploaded_file, encoding='utf-8')
+            except UnicodeDecodeError:
+                df = pd.read_csv(uploaded_file, encoding='latin-1')
     except Exception as e:
         st.error(f"Errore nel caricamento del file: {e}")
         st.stop()
@@ -180,6 +184,7 @@ if selected_tickers:
             st.warning("Calcola prima il saldo annuale dal report finanziario.")
 else:
     st.info("Seleziona almeno un asset class o inserisci dei ticker per creare il portafoglio.")
+
 
 
 
