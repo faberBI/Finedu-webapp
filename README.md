@@ -135,7 +135,7 @@ Formato richiesto:
 
 * Montecarlo Simulation con **copule**.
 * Integrazione con API bancarie (es. PSD2).
-* Portfolio optimization (es. **Markowitz** o **Black-Litterman**).
+* Portfolio optimization (es. **Black-Litterman**).
 * Backtest con strategie dinamiche.
 
 ---
