@@ -141,10 +141,9 @@ Formato richiesto:
 
 ---
 
-## 👨‍💻 Autore
+## 👨‍💻 Autori
 Fabrizio Di Sciorio, PhD
 Giulia Cartei 
-Progetto sviluppato per integrare **gestione finanziaria personale** e **analisi quantitativa di portafoglio** in un’unica dashboard.
-```
+
 
 
