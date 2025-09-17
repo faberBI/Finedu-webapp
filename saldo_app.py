@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 from io import BytesIO
 import plotly.graph_objects as go
-
+import numpy as np   
 from utils.portfolio_utils import download_data, calculate_returns, portfolio_metrics, simulate_investment
 from utils.portfolio_utils import plot_cumulative_returns, plot_return_distribution, plot_weights, plot_drawdown, plot_rolling_volatility, plot_correlation_heatmap,plot_risk_contribution
 
@@ -176,4 +176,5 @@ if selected_tickers:
             st.warning("Calcola prima il saldo annuale dal report finanziario.")
 else:
     st.info("Seleziona almeno un asset class o inserisci dei ticker per creare il portafoglio.")
+
 
