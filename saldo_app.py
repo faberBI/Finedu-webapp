@@ -12,10 +12,9 @@ st.title("Report Finanziario Mensile")
 # Pulsante per scaricare il format Excel/CSV
 st.header("Scarica il format Excel/CSV")
 columns = ['Tipo','Tipologia','Dettaglio','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']
-# Creiamo un DataFrame vuoto con le colonne
 df_format = pd.DataFrame(columns=columns)
 
-# Convertiamo in CSV
+# CSV
 csv_buffer = df_format.to_csv(index=False).encode('utf-8')
 st.download_button(
     label="Scarica CSV di esempio",
@@ -24,7 +23,7 @@ st.download_button(
     mime="text/csv"
 )
 
-# Convertiamo in Excel
+# Excel
 excel_buffer = BytesIO()
 df_format.to_excel(excel_buffer, index=False)
 st.download_button(
@@ -37,69 +36,67 @@ st.download_button(
 # Upload file Excel/CSV
 uploaded_file = st.file_uploader("Carica il file Excel/CSV", type=["csv", "xlsx"])
 if uploaded_file:
-    # Leggi Excel
+    # Leggi file
     if uploaded_file.name.endswith('.xlsx'):
         df = pd.read_excel(uploaded_file)
     else:
         df = pd.read_csv(uploaded_file)
     
-    # Pulisci i valori (€ -> float)
+    # Definizione mesi
     months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']
+    
+    # Pulisci valori (€ -> float)
     for month in months:
         df[month] = df[month].replace('[\€,]', '', regex=True).astype(float)
     
-    # Calcola Totale Mensile
+    # Totale per riga
     df['Totale'] = df[months].sum(axis=1)
     
+    # Entrate vs Uscite
     st.header("Entrate vs Uscite")
     entrate = df[df['Tipo']=='Entrate']['Totale'].sum()
     uscite = df[df['Tipo']=='Uscite']['Totale'].sum()
     st.write(f"Entrate totali: €{entrate:,.2f}")
     st.write(f"Uscite totali: €{uscite:,.2f}")
     
-    # Grafico Distribuzione per mese
+    # Distribuzione mensile
     st.header("Distribuzione Mensile")
     monthly_sum = df.groupby('Tipo')[months].sum().T
-    fig1 = px.bar(monthly_sum, x=monthly_sum.index, y=['Entrate','Uscite'],
-                  title="Entrate e Uscite per mese")
+    fig1 = px.bar(monthly_sum, x=monthly_sum.index, y=['Entrate','Uscite'], title="Entrate e Uscite per mese")
     st.plotly_chart(fig1)
     
-    # Grafico Distribuzione per Tipologia
+    # Distribuzione per tipologia
     st.header("Distribuzione per Tipologia")
     category_sum = df.groupby('Tipologia')['Totale'].sum().reset_index()
-    fig2 = px.pie(category_sum, names='Tipologia', values='Totale',
-                  title="Distribuzione Uscite/Entrate per Tipologia")
+    fig2 = px.pie(category_sum, names='Tipologia', values='Totale', title="Distribuzione Uscite/Entrate per Tipologia")
     st.plotly_chart(fig2)
     
     # Tabella riepilogativa
     st.header("Tabella riepilogativa")
     st.dataframe(df)
-
-    # Calcolo del saldo mensile
-st.header("Saldo Mensile")
-# Somma entrate e uscite per mese
-entrate_mensili = df[df['Tipo']=='Entrate'][months].sum()
-uscite_mensili = df[df['Tipo']=='Uscite'][months].sum()
-saldo_mensile = entrate_mensili - uscite_mensili
-
-# Mostra tabella saldo
-st.write(saldo_mensile.to_frame(name='Saldo Mensile (€)'))
-
-# Istogramma saldo mensile
-fig_saldo = go.Figure()
-fig_saldo.add_trace(go.Bar(x=months, y=saldo_mensile, name="Saldo"))
-fig_saldo.update_layout(
-    title="Saldo Mensile (Entrate - Uscite)",
-    xaxis_title="Mese",
-    yaxis_title="Saldo (€)",
-    template="plotly_white"
-)
-st.plotly_chart(fig_saldo)
-
-# Calcolo del saldo annuale
-st.header("Saldo Annuale")
-saldo_annuale = saldo_mensile.sum()
-st.write(f"Saldo annuale: €{saldo_annuale:,.2f}")
+    
+    # Saldo mensile
+    st.header("Saldo Mensile")
+    entrate_mensili = df[df['Tipo']=='Entrate'][months].sum()
+    uscite_mensili = df[df['Tipo']=='Uscite'][months].sum()
+    saldo_mensile = entrate_mensili - uscite_mensili
+    st.write(saldo_mensile.to_frame(name='Saldo Mensile (€)'))
+    
+    # Istogramma saldo mensile
+    fig_saldo = go.Figure()
+    fig_saldo.add_trace(go.Bar(x=months, y=saldo_mensile, name="Saldo"))
+    fig_saldo.update_layout(
+        title="Saldo Mensile (Entrate - Uscite)",
+        xaxis_title="Mese",
+        yaxis_title="Saldo (€)",
+        template="plotly_white"
+    )
+    st.plotly_chart(fig_saldo)
+    
+    # Saldo annuale
+    st.header("Saldo Annuale")
+    saldo_annuale = saldo_mensile.sum()
+    st.write(f"Saldo annuale: €{saldo_annuale:,.2f}")
 
 
 # =====================
@@ -179,3 +176,4 @@ if selected_tickers:
             st.warning("Calcola prima il saldo annuale dal report finanziario.")
 else:
     st.info("Seleziona almeno un asset class o inserisci dei ticker per creare il portafoglio.")
+
