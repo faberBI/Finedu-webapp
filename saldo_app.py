@@ -36,11 +36,14 @@ st.download_button(
 # Upload file Excel/CSV
 uploaded_file = st.file_uploader("Carica il file Excel/CSV", type=["csv", "xlsx"])
 if uploaded_file:
-    # Leggi file
-    if uploaded_file.name.endswith('.xlsx'):
-        df = pd.read_excel(uploaded_file, engine='openpyxl')
-    else:
-        df = pd.read_csv(uploaded_file)
+    try:
+        if uploaded_file.name.endswith('.xlsx'):
+            df = pd.read_excel(uploaded_file, engine='openpyxl')
+        else:
+            df = pd.read_csv(uploaded_file)
+    except Exception as e:
+        st.error(f"Errore nel caricamento del file: {e}")
+        st.stop()
 
     
     # Definizione mesi
@@ -177,6 +180,7 @@ if selected_tickers:
             st.warning("Calcola prima il saldo annuale dal report finanziario.")
 else:
     st.info("Seleziona almeno un asset class o inserisci dei ticker per creare il portafoglio.")
+
 
 
 
