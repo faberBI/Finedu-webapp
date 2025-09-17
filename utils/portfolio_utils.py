@@ -201,3 +201,75 @@ def plot_risk_contribution(weights, returns_df):
 def plot_weights(weights, tickers):
     fig = px.pie(values=weights, names=tickers, title="Ponderazione Portafoglio")
     return fig
+
+def plot_efficient_frontier(returns_df, n_portfolios=5000, risk_free=0.02):
+    tickers = returns_df.columns
+    mean_returns = returns_df.mean() * 252
+    cov_matrix = returns_df.cov() * 252
+
+    results = {"Returns": [], "Volatility": [], "Sharpe": [], "Weights": []}
+
+    for _ in range(n_portfolios):
+        weights = np.random.random(len(tickers))
+        weights /= np.sum(weights)
+
+        port_return = np.dot(weights, mean_returns)
+        port_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+        sharpe = (port_return - risk_free) / port_vol
+
+        results["Returns"].append(port_return)
+        results["Volatility"].append(port_vol)
+        results["Sharpe"].append(sharpe)
+        results["Weights"].append(weights)
+
+    ef_df = pd.DataFrame(results)
+
+    fig = px.scatter(
+        ef_df, x="Volatility", y="Returns",
+        color="Sharpe",
+        color_continuous_scale="Viridis",
+        title="Frontiera Efficiente (Portafogli Simulati)",
+        labels={"Volatility":"Volatilità annua", "Returns":"Rendimento atteso annuo"}
+    )
+
+    # Evidenzia portafoglio scelto
+    user_return = np.dot(weights, mean_returns)
+    user_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+    fig.add_trace(go.Scatter(
+        x=[user_vol], y=[user_return],
+        mode="markers",
+        marker=dict(color="red", size=12, symbol="x"),
+        name="Portafoglio scelto"
+    ))
+
+    return fig
+
+def plot_contribution(weights, returns_df):
+    mean_returns = returns_df.mean() * 252
+    cov_matrix = returns_df.cov() * 252
+
+    # Contribution to expected return
+    contrib_return = weights * mean_returns
+
+    # Contribution to volatility (MCR * weight)
+    port_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+    mcr = np.dot(cov_matrix, weights) / port_vol
+    contrib_vol = weights * mcr
+
+    contrib_df = pd.DataFrame({
+        "Asset": returns_df.columns,
+        "Contrib Rendimento": contrib_return,
+        "Contrib Volatilità": contrib_vol
+    })
+
+    fig = go.Figure(data=[
+        go.Bar(name="Rendimento Atteso", x=contrib_df["Asset"], y=contrib_df["Contrib Rendimento"]),
+        go.Bar(name="Volatilità", x=contrib_df["Asset"], y=contrib_df["Contrib Volatilità"])
+    ])
+    fig.update_layout(
+        barmode="group",
+        title="Contribution Analysis (Rendimento e Volatilità)"
+    )
+
+    return fig
+
