@@ -38,9 +38,10 @@ uploaded_file = st.file_uploader("Carica il file Excel/CSV", type=["csv", "xlsx"
 if uploaded_file:
     # Leggi file
     if uploaded_file.name.endswith('.xlsx'):
-        df = pd.read_excel(uploaded_file)
+        df = pd.read_excel(uploaded_file, engine='openpyxl')
     else:
         df = pd.read_csv(uploaded_file)
+
     
     # Definizione mesi
     months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']
@@ -176,5 +177,6 @@ if selected_tickers:
             st.warning("Calcola prima il saldo annuale dal report finanziario.")
 else:
     st.info("Seleziona almeno un asset class o inserisci dei ticker per creare il portafoglio.")
+
 
 
