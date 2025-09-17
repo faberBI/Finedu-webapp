@@ -5,7 +5,7 @@ from io import BytesIO
 import plotly.graph_objects as go
 import numpy as np   
 from utils.portfolio_utils import download_data, calculate_returns, portfolio_metrics, simulate_investment
-from utils.portfolio_utils import plot_cumulative_returns, plot_return_distribution, plot_weights, plot_drawdown, plot_rolling_volatility, plot_correlation_heatmap,plot_risk_contribution
+from utils.portfolio_utils import plot_cumulative_returns, plot_return_distribution, plot_weights, plot_drawdown, plot_rolling_volatility, plot_correlation_heatmap,plot_risk_contribution, plot_contribution, plot_efficient_frontier
 
 st.markdown("""
 # 📊 Report Finanziario Mensile
@@ -176,7 +176,8 @@ if selected_tickers:
             st.plotly_chart(plot_rolling_volatility(weights, returns_df))
             st.plotly_chart(plot_correlation_heatmap(metrics["Correlation Matrix"]))
             st.plotly_chart(plot_risk_contribution(weights, returns_df))
-
+            st.plotly_chart(plot_efficient_frontier(returns_df))
+            st.plotly_chart(plot_contribution(weights, returns_df))
 # =====================
 # Simulazione crescita saldo investito
 # =====================
@@ -229,6 +230,7 @@ if st.button("Simula Investimento"):
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
 
 
 
