@@ -1,4 +1,4 @@
-```markdown
+````markdown
 # 📊 Financial Report & Portfolio Simulator
 
 Questo progetto è un **dashboard interattivo in Streamlit** per:
@@ -62,16 +62,14 @@ Questo progetto è un **dashboard interattivo in Streamlit** per:
 
 ## 📂 Struttura del progetto
 
-```
-
+```bash
 .
-├── app.py                     # File principale Streamlit
+├── app.py                   # File principale Streamlit
 ├── utils/
-│   ├── portfolio\_utils.py     # Funzioni di analisi portafoglio
+│   ├── portfolio_utils.py    # Funzioni di analisi portafoglio
 │   └── ...
-├── requirements.txt           # Dipendenze del progetto
-└── README.md                  # Documentazione
-
+├── requirements.txt         # Dipendenze del progetto
+└── README.md                # Documentazione
 ````
 
 ---
@@ -79,10 +77,11 @@ Questo progetto è un **dashboard interattivo in Streamlit** per:
 ## ⚙️ Installazione
 
 1. Clona il repository:
+
    ```bash
    git clone https://github.com/tuo-username/financial-report.git
    cd financial-report
-````
+   ```
 
 2. Crea un ambiente virtuale e installa le dipendenze:
 
@@ -142,8 +141,9 @@ Formato richiesto:
 ---
 
 ## 👨‍💻 Autori
-Fabrizio Di Sciorio, PhD
-Giulia Cartei 
 
+* Fabrizio Di Sciorio, PhD
+* Giulia Cartei
 
+```
 
