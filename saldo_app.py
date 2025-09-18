@@ -325,22 +325,34 @@ if st.button("Simula Investimento"):
 # Pulsante per scaricare il PDF
 # =====================
 if 'df_pct' in st.session_state and 'metrics' in st.session_state:
-    if st.button("Scarica PDF report"):
-        percentili_data = st.session_state['df_pct']
-        metrics = st.session_state['metrics']
-        pdf_bytes = create_pdf_report_investimento(
-            st.session_state.get("saldo_annuale", 0),
-            metrics= metrics,
-            simulazione= percentili_data
+    # Creiamo un flag per sapere se il PDF è pronto
+    if "pdf_bytes" not in st.session_state:
+        st.session_state["pdf_bytes"] = None
+
+    # Bottone per generare PDF
+    if st.button("Genera PDF report"):
+        saldo = st.session_state.get("saldo_annuale", 0)
+        metrics = st.session_state["metrics"]
+        simulazione = st.session_state["df_pct"]
+
+        st.session_state["pdf_bytes"] = create_pdf_report_investimento(
+            saldo_annuale=saldo,
+            metrics=metrics,
+            simulazione=simulazione
         )
+
+    # Mostriamo il download button solo se il PDF è stato generato
+    if st.session_state["pdf_bytes"] is not None:
         st.download_button(
             "Scarica PDF",
-            data=pdf_bytes,
+            data=st.session_state["pdf_bytes"],
             file_name="report_finanziario.pdf",
             mime="application/pdf"
         )
 else:
     st.info("🔹 Completa prima la simulazione per abilitare il download del PDF.")
+
+
 
 
 
