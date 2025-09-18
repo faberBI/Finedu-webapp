@@ -317,51 +317,39 @@ import textwrap
 # =====================
 
 def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[]):
-    """
-    Crea un PDF con i principali output della tua app.
-    - df: DataFrame finanziario caricato
-    - saldo_annuale: float
-    - metrics: dizionario metriche portafoglio (opzionale)
-    - percentili: DataFrame con percentili simulazione t-copula (opzionale)
-    - figs: lista di plotly figures da inserire
-    """
+    import textwrap, tempfile
+    from fpdf import FPDF
+
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # =====================
-    # Registrazione font DejaVu Unicode
-    # =====================
+    # Font DejaVu Unicode
     pdf.add_font("DejaVu", "", "font/DejaVuSans.ttf", uni=True)
     pdf.add_font("DejaVu", "B", "font/DejaVuSans-Bold.ttf", uni=True)
     pdf.set_font("DejaVu", "B", 14)
+
+    # Titolo senza emoji
     pdf.cell(0, 10, "Report Finanziario Mensile", ln=True, align="C")
     pdf.ln(5)
 
-    # =====================
-    # Saldo annuale
-    # =====================
+    # Saldo annuale (sostituito € con EUR)
     pdf.set_font("DejaVu", "", 12)
-    for line in textwrap.wrap(f"Saldo annuale: €{saldo_annuale:,.2f}", width=90):
+    for line in textwrap.wrap(f"Saldo annuale: {saldo_annuale:,.2f} EUR", width=90):
         pdf.multi_cell(0, 8, line)
     pdf.ln(5)
 
-    # =====================
     # Tabella riepilogativa (prime 10 righe)
-    # =====================
     pdf.set_font("DejaVu", "B", 12)
     pdf.cell(0, 8, "Tabella riepilogativa (prime 10 righe)", ln=True)
     pdf.set_font("DejaVu", "", 10)
-    for i, row in df.head(10).iterrows():
+    for _, row in df.head(10).iterrows():
         row_str = ", ".join([f"{col}: {row[col]}" for col in df.columns])
-        wrapped_lines = textwrap.wrap(row_str, width=90)
-        for line in wrapped_lines:
-            pdf.multi_cell(0, 6, line)
+        for l in textwrap.wrap(row_str, width=90):
+            pdf.multi_cell(0, 6, l)
     pdf.ln(5)
 
-    # =====================
     # Metriche portafoglio
-    # =====================
     if metrics:
         pdf.set_font("DejaVu", "B", 12)
         pdf.cell(0, 8, "Metriche Portafoglio", ln=True)
@@ -369,14 +357,11 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
         for k, v in metrics.items():
             if k != "Correlation Matrix":
                 line = f"{k}: {v:.2f}" if ("Ratio" in k or k=="Max Drawdown") else f"{k}: {v:.2%}"
-                wrapped_lines = textwrap.wrap(line, width=90)
-                for l in wrapped_lines:
+                for l in textwrap.wrap(line, width=90):
                     pdf.multi_cell(0, 6, l)
         pdf.ln(5)
 
-    # =====================
-    # Percentili simulazione t-Copula
-    # =====================
+    # Percentili t-Copula
     if percentili is not None:
         pdf.set_font("DejaVu", "B", 12)
         pdf.cell(0, 8, "Percentili Simulazione Portafoglio (t-Copula)", ln=True)
@@ -384,14 +369,11 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
         for i in range(len(percentili)):
             line = f"Anno {percentili['Anno'][i]}: Totale P5={percentili['Totale_P5'][i]:,.2f}, " \
                    f"P50={percentili['Totale_P50'][i]:,.2f}, P95={percentili['Totale_P95'][i]:,.2f}"
-            wrapped_lines = textwrap.wrap(line, width=90)
-            for l in wrapped_lines:
+            for l in textwrap.wrap(line, width=90):
                 pdf.multi_cell(0, 6, l)
         pdf.ln(5)
 
-    # =====================
     # Grafici Plotly
-    # =====================
     for fig in figs:
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
@@ -401,21 +383,19 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
                 pdf.image(tmpfile.name, w=180)
                 pdf.ln(5)
         except Exception as e:
-            pdf.set_font("DejaVu", "I", 10)
-            wrapped_lines = textwrap.wrap(f"[Errore inserimento grafico: {e}]", width=90)
-            for l in wrapped_lines:
+            pdf.set_font("DejaVu", "", 10)
+            for l in textwrap.wrap(f"[Errore inserimento grafico: {e}]", width=90):
                 pdf.multi_cell(0, 6, l)
             pdf.ln(5)
 
-    # =====================
-    # Output PDF in bytes
-    # =====================
+    # Output PDF
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
         pdf.output(tmp_pdf.name)
         tmp_pdf.flush()
         with open(tmp_pdf.name, "rb") as f:
             pdf_bytes = f.read()
     return pdf_bytes
+
 
 
 
