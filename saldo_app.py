@@ -345,13 +345,14 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state \
    )
 
     st.download_button(
-        "Scarica Excel report",
+        "💾📊💰 Scarica il report in Excel",
         data=excel_bytes,
         file_name="report_finanziario.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 else:
     st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
+
 
 
 
