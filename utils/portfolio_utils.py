@@ -312,29 +312,26 @@ import tempfile
 import base64
 import textwrap
 
-# =====================
-# 9️⃣ Funzione per creare PDF del report
-# =====================
 
 # =====================
 # 9️⃣ Funzione per creare PDF del report compatibile Streamlit Cloud
 # =====================
 
-from fpdf import FPDF
-import tempfile
-import textwrap
-
-def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
+def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None):
     """
-    Crea un PDF con:
+    Crea un PDF compatibile Streamlit Cloud con:
     1️⃣ Titolo + saldo annuale
-    3️⃣ Metriche portafoglio (se presenti)
-    4️⃣ Grafici Plotly (se presenti)
-
-    - df: DataFrame finanziario caricato
-    - saldo_annuale: float
-    - metrics: dizionario metriche portafoglio (opzionale)
-    - figs: lista di plotly figures da inserire
+    3️⃣ Metriche portafoglio (opzionale)
+    4️⃣ Percentili simulazione (opzionale)
+    
+    Args:
+        df: DataFrame finanziario
+        saldo_annuale: float
+        metrics: dict metriche portafoglio
+        percentili: dict con chiavi 'Anno', 'Totale_P5', 'Totale_P50', 'Totale_P95', ecc.
+    
+    Returns:
+        pdf_bytes: PDF pronto per st.download_button
     """
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -345,7 +342,7 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     pdf.set_font("DejaVu", "", 12)
     
     # Titolo
-    pdf.cell(0, 10, "Report Finanziario Mensile", ln=True, align="C")
+    pdf.cell(0, 10, "📊 Report Finanziario Mensile", ln=True, align="C")
     pdf.ln(5)
     
     # Saldo annuale
@@ -364,15 +361,18 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
                 pdf.multi_cell(0, 6, wrapped_text)
         pdf.ln(5)
     
-    # Grafici Plotly
-    for fig in figs:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-            # Compatibile Streamlit Cloud: genera PNG in memoria
-            img_bytes = fig.to_image(format="png")
-            tmpfile.write(img_bytes)
-            tmpfile.flush()
-            pdf.image(tmpfile.name, w=180)
-            pdf.ln(5)
+    # Percentili simulazione (opzionale)
+    if percentili:
+        pdf.set_font("DejaVu", "B", 12)
+        pdf.cell(0, 8, "Percentili Simulazione Investimento", ln=True)
+        pdf.set_font("DejaVu", "", 12)
+        headers = list(percentili.keys())
+        n_rows = len(percentili[headers[0]])
+        for i in range(n_rows):
+            row_text = ", ".join([f"{h}: {percentili[h][i]:,.2f}" for h in headers])
+            wrapped_text = "\n".join(textwrap.wrap(row_text, width=90))
+            pdf.multi_cell(0, 6, wrapped_text)
+        pdf.ln(5)
     
     # Output PDF in bytes
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
