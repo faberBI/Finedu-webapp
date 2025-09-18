@@ -316,26 +316,19 @@ import textwrap
 # 9️⃣ Funzione per creare Excel del report
 # =====================
 
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.chart import LineChart, Reference, BarChart
 
-def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None):
-    """
-    Crea un file Excel con:
-    1. Metriche portafoglio
-    2. Percentili simulazione t-copula
-    3. Grafici di evoluzione mediana e percentili
-    """
-    # Workbook
+def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None, returns_df=None, weights=None, selected_tickers=None):
+    from openpyxl import Workbook
+    from openpyxl.utils.dataframe import dataframe_to_rows
+    from openpyxl.chart import LineChart, Reference, BarChart
+
     wb = Workbook()
-    
+
     # =====================
     # Sheet: Metriche Portafoglio
     # =====================
     ws_metrics = wb.active
     ws_metrics.title = "Metriche Portafoglio"
-    
     if metrics:
         metrics_data = []
         for key, value in metrics.items():
@@ -345,7 +338,7 @@ def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None):
         df_metrics = pd.DataFrame(metrics_data, columns=["Metrica", "Valore"])
         for r in dataframe_to_rows(df_metrics, index=False, header=True):
             ws_metrics.append(r)
-    
+
     # =====================
     # Sheet: Percentili Simulazione
     # =====================
@@ -353,33 +346,103 @@ def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None):
         ws_pct = wb.create_sheet("Percentili Simulazione")
         for r in dataframe_to_rows(df_pct, index=False, header=True):
             ws_pct.append(r)
-        
-        # Grafico linea: Totale P5, P50, P95
+
+        # Grafico linea Totale P5, P50, P95
         chart = LineChart()
         chart.title = "Simulazione t-Copula: Totale"
-        chart.style = 10
         chart.y_axis.title = 'Valore (€)'
         chart.x_axis.title = 'Anno'
-        
         data = Reference(ws_pct, min_col=6, max_col=8, min_row=1, max_row=len(df_pct)+1)
         cats = Reference(ws_pct, min_col=1, min_row=2, max_row=len(df_pct)+1)
         chart.add_data(data, titles_from_data=True)
         chart.set_categories(cats)
         ws_pct.add_chart(chart, "J2")
-        
+
         # Grafico stacked: Capitale + Rendimento P50
         chart2 = BarChart()
         chart2.type = "col"
-        chart2.style = 10
-        chart2.title = "Capitale Investito + Rendimento Mediano"
+        chart2.title = "Capitale + Rendimento Mediano"
         chart2.y_axis.title = 'Valore (€)'
         chart2.x_axis.title = 'Anno'
-        
         data2 = Reference(ws_pct, min_col=2, max_col=3, min_row=1, max_row=len(df_pct)+1)
         chart2.add_data(data2, titles_from_data=True)
         chart2.set_categories(cats)
         ws_pct.add_chart(chart2, "J20")
-    
+
+    # =====================
+    # Sheet: Rendimento Cumulativo
+    # =====================
+    if returns_df is not None:
+        ws_cum = wb.create_sheet("Rendimento Cumulativo")
+        cum_returns = (returns_df + 1).cumprod()
+        cum_returns.insert(0, 'Data', cum_returns.index)
+        for r in dataframe_to_rows(cum_returns, index=False, header=True):
+            ws_cum.append(r)
+        chart_cum = LineChart()
+        chart_cum.title = "Rendimento Cumulativo"
+        chart_cum.y_axis.title = "Cumulato"
+        chart_cum.x_axis.title = "Data"
+        data_cum = Reference(ws_cum, min_col=2, max_col=1+len(returns_df.columns), min_row=1, max_row=len(cum_returns)+1)
+        cats_cum = Reference(ws_cum, min_col=1, min_row=2, max_row=len(cum_returns)+1)
+        chart_cum.add_data(data_cum, titles_from_data=True)
+        chart_cum.set_categories(cats_cum)
+        ws_cum.add_chart(chart_cum, "J2")
+
+        # =====================
+        # Sheet: Volatilità Rolling
+        # =====================
+        ws_vol = wb.create_sheet("Volatilità Rolling")
+        rolling_vol = returns_df.rolling(window=21).std() * np.sqrt(252)
+        rolling_vol.insert(0, 'Data', rolling_vol.index)
+        for r in dataframe_to_rows(rolling_vol, index=False, header=True):
+            ws_vol.append(r)
+        chart_vol = LineChart()
+        chart_vol.title = "Volatilità Rolling (mensile)"
+        chart_vol.y_axis.title = "Volatilità"
+        chart_vol.x_axis.title = "Data"
+        data_vol = Reference(ws_vol, min_col=2, max_col=1+len(returns_df.columns), min_row=1, max_row=len(rolling_vol)+1)
+        cats_vol = Reference(ws_vol, min_col=1, min_row=2, max_row=len(rolling_vol)+1)
+        chart_vol.add_data(data_vol, titles_from_data=True)
+        chart_vol.set_categories(cats_vol)
+        ws_vol.add_chart(chart_vol, "J2")
+
+        # =====================
+        # Sheet: Drawdown
+        # =====================
+        ws_dd = wb.create_sheet("Drawdown")
+        cum_max = (returns_df + 1).cumprod().cummax()
+        drawdown = (returns_df + 1).cumprod() / cum_max - 1
+        drawdown.insert(0, 'Data', drawdown.index)
+        for r in dataframe_to_rows(drawdown, index=False, header=True):
+            ws_dd.append(r)
+        chart_dd = LineChart()
+        chart_dd.title = "Drawdown Massimo"
+        chart_dd.y_axis.title = "Drawdown"
+        chart_dd.x_axis.title = "Data"
+        data_dd = Reference(ws_dd, min_col=2, max_col=1+len(returns_df.columns), min_row=1, max_row=len(drawdown)+1)
+        cats_dd = Reference(ws_dd, min_col=1, min_row=2, max_row=len(drawdown)+1)
+        chart_dd.add_data(data_dd, titles_from_data=True)
+        chart_dd.set_categories(cats_dd)
+        ws_dd.add_chart(chart_dd, "J2")
+
+    # =====================
+    # Sheet: Pesi Titoli
+    # =====================
+    if weights is not None and selected_tickers is not None:
+        ws_weights = wb.create_sheet("Pesi Titoli")
+        df_weights = pd.DataFrame({'Ticker': selected_tickers, 'Peso': weights})
+        for r in dataframe_to_rows(df_weights, index=False, header=True):
+            ws_weights.append(r)
+        chart_w = BarChart()
+        chart_w.title = "Distribuzione Pesi"
+        chart_w.y_axis.title = "Peso"
+        chart_w.x_axis.title = "Ticker"
+        data_w = Reference(ws_weights, min_col=2, max_col=2, min_row=1, max_row=len(df_weights)+1)
+        cats_w = Reference(ws_weights, min_col=1, min_row=2, max_row=len(df_weights)+1)
+        chart_w.add_data(data_w, titles_from_data=True)
+        chart_w.set_categories(cats_w)
+        ws_weights.add_chart(chart_w, "D2")
+
     # =====================
     # Salvataggio Excel
     # =====================
@@ -389,6 +452,8 @@ def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None):
         excel_bytes = tmp_excel.read()
     
     return excel_bytes
+
+
 
 
 
