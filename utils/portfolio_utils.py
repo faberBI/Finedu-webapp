@@ -327,7 +327,7 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "📊 Report Finanziario Mensile", ln=True, align="C")
+    pdf.cell(0, 10, "Report Finanziario Mensile", ln=True, align="C")
     pdf.set_font("Arial", "", 12)
     pdf.ln(5)
     
@@ -371,4 +371,5 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
         with open(tmp_pdf.name, "rb") as f:
             pdf_bytes = f.read()
     return pdf_bytes
+
 
