@@ -192,10 +192,12 @@ if selected_tickers:
 # Simulazione crescita saldo investito
 # =====================
 years = st.slider("Anni di investimento", 1, 30, 5)
-
-returns_df = st.session_state["returns_df"]
-weights = st.session_state["weights"]
-selected_tickers = st.session_state["selected_tickers"]
+if 'returns_df' not in st.session_state:
+    st.error("⚠️ Costruisci il portafoglio! .")
+else:
+    returns_df = st.session_state["returns_df"]
+    weights = st.session_state["weights"]
+    selected_tickers = st.session_state["selected_tickers"]
 
 if st.button("Simula Investimento"):
     if 'saldo_annuale' not in st.session_state:
@@ -338,6 +340,7 @@ if st.button("Scarica Report PDF"):
         file_name="report_finanziario.pdf",
         mime="application/pdf"
     )
+
 
 
 
