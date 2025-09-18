@@ -316,40 +316,43 @@ import textwrap
 # 9️⃣ Funzione per creare PDF del report
 # =====================
 
-def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[]):
-    import textwrap, tempfile
-    from fpdf import FPDF
+import tempfile
+from fpdf import FPDF
+import textwrap
 
+def create_pdf_report_investimento(saldo_annuale, metrics=None, simulazione=None):
+    """
+    Crea un PDF minimalista con:
+    - saldo annuale
+    - metriche portafoglio (opzionale)
+    - simulazione investimento (DataFrame con mediana e percentili per anno, opzionale)
+    """
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # Font DejaVu Unicode
+    # =====================
+    # Font Unicode DejaVu
+    # =====================
     pdf.add_font("DejaVu", "", "font/DejaVuSans.ttf", uni=True)
     pdf.add_font("DejaVu", "B", "font/DejaVuSans-Bold.ttf", uni=True)
     pdf.set_font("DejaVu", "B", 14)
 
-    # Titolo senza emoji
+    # Titolo
     pdf.cell(0, 10, "Report Finanziario Mensile", ln=True, align="C")
     pdf.ln(5)
 
-    # Saldo annuale (sostituito € con EUR)
+    # =====================
+    # Saldo annuale
+    # =====================
     pdf.set_font("DejaVu", "", 12)
-    for line in textwrap.wrap(f"Saldo annuale: {saldo_annuale:,.2f} EUR", width=90):
+    for line in textwrap.wrap(f"Saldo annuale: €{saldo_annuale:,.2f}", width=90):
         pdf.multi_cell(0, 8, line)
     pdf.ln(5)
 
-    # Tabella riepilogativa (prime 10 righe)
-    pdf.set_font("DejaVu", "B", 12)
-    pdf.cell(0, 8, "Tabella riepilogativa (prime 10 righe)", ln=True)
-    pdf.set_font("DejaVu", "", 10)
-    for _, row in df.head(10).iterrows():
-        row_str = ", ".join([f"{col}: {row[col]}" for col in df.columns])
-        for l in textwrap.wrap(row_str, width=90):
-            pdf.multi_cell(0, 6, l)
-    pdf.ln(5)
-
+    # =====================
     # Metriche portafoglio
+    # =====================
     if metrics:
         pdf.set_font("DejaVu", "B", 12)
         pdf.cell(0, 8, "Metriche Portafoglio", ln=True)
@@ -361,40 +364,33 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
                     pdf.multi_cell(0, 6, l)
         pdf.ln(5)
 
-    # Percentili t-Copula
-    if percentili is not None:
+    # =====================
+    # Simulazione investimento
+    # =====================
+    if simulazione is not None:
         pdf.set_font("DejaVu", "B", 12)
-        pdf.cell(0, 8, "Percentili Simulazione Portafoglio (t-Copula)", ln=True)
+        pdf.cell(0, 8, "Simulazione Investimento", ln=True)
         pdf.set_font("DejaVu", "", 10)
-        for i in range(len(percentili)):
-            line = f"Anno {percentili['Anno'][i]}: Totale P5={percentili['Totale_P5'][i]:,.2f}, " \
-                   f"P50={percentili['Totale_P50'][i]:,.2f}, P95={percentili['Totale_P95'][i]:,.2f}"
+        for i in range(len(simulazione)):
+            row = simulazione.iloc[i]
+            line = f"Anno {row['Anno']}: Mediana={row['Totale_P50']:,.2f}, " \
+                   f"5° Perc={row['Totale_P5']:,.2f}, 95° Perc={row['Totale_P95']:,.2f}"
             for l in textwrap.wrap(line, width=90):
                 pdf.multi_cell(0, 6, l)
         pdf.ln(5)
 
-    # Grafici Plotly
-    for fig in figs:
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-                img_bytes = fig.to_image(format="png", width=700, height=400, scale=2)
-                tmpfile.write(img_bytes)
-                tmpfile.flush()
-                pdf.image(tmpfile.name, w=180)
-                pdf.ln(5)
-        except Exception as e:
-            pdf.set_font("DejaVu", "", 10)
-            for l in textwrap.wrap(f"[Errore inserimento grafico: {e}]", width=90):
-                pdf.multi_cell(0, 6, l)
-            pdf.ln(5)
-
-    # Output PDF
+    # =====================
+    # Output PDF in bytes
+    # =====================
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
         pdf.output(tmp_pdf.name)
         tmp_pdf.flush()
         with open(tmp_pdf.name, "rb") as f:
             pdf_bytes = f.read()
+
     return pdf_bytes
+
+
 
 
 
