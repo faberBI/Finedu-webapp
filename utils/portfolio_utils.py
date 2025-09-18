@@ -273,3 +273,39 @@ def plot_contribution(weights, returns_df):
 
     return fig
 
+from scipy.stats import t as student_t
+from scipy.stats import norm
+
+def simulate_t_copula(mu_ann, sigma_ann, corr, years, n_scenarios, nu=5):
+    """
+    Simula rendimenti portafoglio con t-copula.
+    - mu_ann: media annualizzata (array n_assets)
+    - sigma_ann: sigma annualizzata (array n_assets)
+    - corr: matrice di correlazione NxN
+    - years: orizzonte temporale
+    - n_scenarios: numero di traiettorie simulate
+    - nu: gradi di libertà della t-copula
+    """
+    n_assets = len(mu_ann)
+    
+    # 1. decomposizione di Cholesky sulla correlazione
+    L = np.linalg.cholesky(corr)
+    
+    # 2. genera Z ~ N(0,I) e scala con L → corr
+    Z = np.random.randn(n_scenarios * years, n_assets)
+    Z_corr = Z @ L.T
+    
+    # 3. genera chi2 indipendente per la t
+    chi2 = np.random.chisquare(nu, size=(n_scenarios * years, 1))
+    T = Z_corr / np.sqrt(chi2 / nu)  # multivariate t con corr
+    
+    # 4. converto in uniformi con CDF t
+    U = student_t.cdf(T, df=nu)
+    
+    # 5. inverse normal CDF → margini ~ N(0,1)
+    X = norm.ppf(U)
+    
+    # 6. scala margini con mu, sigma
+    draws = mu_ann + sigma_ann * X
+    
+    return draws.reshape(n_scenarios, years, n_assets)
