@@ -5,7 +5,7 @@ from io import BytesIO
 import plotly.graph_objects as go
 import numpy as np   
 
-from utils.portfolio_utils import download_data, calculate_returns, portfolio_metrics, simulate_investment, simulate_t_copula, create_pdf_report_investimento
+from utils.portfolio_utils import download_data, calculate_returns, portfolio_metrics, simulate_investment, simulate_t_copula, create_excel_report_completo
 from utils.portfolio_utils import plot_cumulative_returns, plot_return_distribution, plot_weights, plot_drawdown, plot_rolling_volatility, plot_correlation_heatmap,plot_risk_contribution, plot_contribution, plot_efficient_frontier
 
 from fpdf import FPDF
@@ -13,6 +13,10 @@ import plotly.io as pio
 import tempfile
 import base64
 import textwrap
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.chart import LineChart, Reference, BarChart
+
 
 st.markdown("""
 # 📊 Report Finanziario Mensile
@@ -322,27 +326,34 @@ if st.button("Simula Investimento"):
                            file_name="simulazione_percentili_tcopula.csv", mime="text/csv")
 
 # =====================
-# Pulsante per scaricare il PDF
+# Pulsante per scaricare l'Excel
 # =====================
-if 'df_pct' in st.session_state and 'metrics' in st.session_state:
+if 'df_pct' in st.session_state and 'metrics' in st.session_state \
+   and 'returns_df' in st.session_state and 'weights' in st.session_state \
+   and 'selected_tickers' in st.session_state:
+
     saldo = st.session_state.get("saldo_annuale", 0)
     metrics = st.session_state["metrics"]
-    simulazione = st.session_state["df_pct"]
+    df_pct = st.session_state["df_pct"]
+    returns_df = st.session_state["returns_df"]
 
-    pdf_bytes = create_pdf_report_investimento(
-        saldo_annuale=saldo,
+
+    # Crea il file Excel completo
+    excel_bytes = create_excel_report_completo(saldo,
         metrics=metrics,
-        simulazione=simulazione
-    )
+        df_pct=df_pct,
+   )
 
     st.download_button(
-        "Scarica PDF report",
-        data=pdf_bytes,
-        file_name="report_finanziario.pdf",
-        mime="application/pdf"
+        "Scarica Excel report",
+        data=excel_bytes,
+        file_name="report_finanziario.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 else:
-    st.info("🔹 Completa prima la simulazione per abilitare il download del PDF.")
+    st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
+
+
 
 
 
