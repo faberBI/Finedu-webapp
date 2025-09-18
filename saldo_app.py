@@ -156,6 +156,9 @@ if selected_tickers:
             # Download dati storici e calcolo rendimenti
             data = download_data(selected_tickers)
             returns_df = calculate_returns(data)
+            st.session_state["returns_df"] = returns_df
+            st.session_state["weights"] = weights
+            st.session_state["selected_tickers"] = selected_tickers
 
             # Metriche portafoglio
             metrics = portfolio_metrics(weights, returns_df)
@@ -183,6 +186,10 @@ if selected_tickers:
 # Simulazione crescita saldo investito
 # =====================
 years = st.slider("Anni di investimento", 1, 30, 5)
+
+returns_df = st.session_state["returns_df"]
+weights = st.session_state["weights"]
+selected_tickers = st.session_state["selected_tickers"]
 
 if st.button("Simula Investimento"):
     if 'saldo_annuale' not in st.session_state:
@@ -302,6 +309,7 @@ if st.button("Simula Investimento"):
         csv_bytes = df_pct.to_csv(index=False).encode('utf-8')
         st.download_button("Scarica percentili (CSV)", data=csv_bytes,
                            file_name="simulazione_percentili_tcopula.csv", mime="text/csv")
+
 
 
 
