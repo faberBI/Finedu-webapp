@@ -330,8 +330,8 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state:
         metrics = st.session_state['metrics']
         pdf_bytes = create_pdf_report_investimento(
             st.session_state.get("saldo_annuale", 0),
-            metrics=metrics,
-            percentili=percentili_data
+            metrics= metrics,
+            simulazione= percentili_data
         )
         st.download_button(
             "Scarica PDF",
@@ -341,6 +341,7 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state:
         )
 else:
     st.info("🔹 Completa prima la simulazione per abilitare il download del PDF.")
+
 
 
 
