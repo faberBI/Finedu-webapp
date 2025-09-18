@@ -12,6 +12,7 @@ from fpdf import FPDF
 import plotly.io as pio
 import tempfile
 import base64
+import textwrap
 
 st.markdown("""
 # 📊 Report Finanziario Mensile
@@ -340,6 +341,7 @@ if st.button("Scarica Report PDF"):
         file_name="report_finanziario.pdf",
         mime="application/pdf"
     )
+
 
 
 
