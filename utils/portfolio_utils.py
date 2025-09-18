@@ -310,6 +310,7 @@ from fpdf import FPDF
 import plotly.io as pio
 import tempfile
 import base64
+import textwrap
 
 # =====================
 # 9️⃣ Funzione per creare PDF del report
@@ -326,31 +327,39 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    
+    # Font Unicode
     pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
     pdf.set_font("DejaVu", "", 12)
     
+    # Titolo
     pdf.cell(0, 10, "Report Finanziario Mensile", ln=True, align="C")
     pdf.ln(5)
     
     # Saldo annuale
-    pdf.multi_cell(0, 8, f"Saldo annuale: €{saldo_annuale:,.2f}")
+    pdf.multi_cell(0, 8, f"Saldo annuale: EUR {saldo_annuale:,.2f}")
     pdf.ln(5)
     
     # Tabella riepilogativa (prime 10 righe)
     pdf.cell(0, 8, "Tabella riepilogativa (prime 10 righe)", ln=True)
     cols = df.columns.tolist()
     for i, row in df.head(10).iterrows():
+        # Wrap testo per evitare errori FPDF su righe lunghe
         row_str = ", ".join([f"{col}: {row[col]}" for col in cols])
-        pdf.multi_cell(0, 6, row_str)
+        wrapped_text = "\n".join(textwrap.wrap(row_str, width=90))
+        pdf.multi_cell(0, 6, wrapped_text)
     pdf.ln(5)
     
     # Metriche portafoglio
     if metrics:
-        pdf.set_font("Arial", "B", 12)
+        pdf.set_font("DejaVu", "B", 12)
         pdf.cell(0, 8, "Metriche Portafoglio", ln=True)
+        pdf.set_font("DejaVu", "", 12)
         for k, v in metrics.items():
             if k != "Correlation Matrix":
-                pdf.multi_cell(0, 6, f"{k}: {v:.2f}" if "Ratio" in k or k=="Max Drawdown" else f"{k}: {v:.2%}")
+                line = f"{k}: {v:.2f}" if "Ratio" in k or k=="Max Drawdown" else f"{k}: {v:.2%}"
+                wrapped_line = "\n".join(textwrap.wrap(line, width=90))
+                pdf.multi_cell(0, 6, wrapped_line)
         pdf.ln(5)
     
     # Grafici
@@ -369,6 +378,7 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
         with open(tmp_pdf.name, "rb") as f:
             pdf_bytes = f.read()
     return pdf_bytes
+
 
 
 
