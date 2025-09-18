@@ -44,7 +44,7 @@ Questo progetto è un **dashboard interattivo in Streamlit** per:
   - Heatmap correlazioni
   - Contribution Analysis (rendimento & rischio)
 
-### 📈 Simulazione crescita capitale
+### 📈 Simulazione crescita capitale con metodo Copula (t-student)
 - Usa il **saldo annuale** come capitale investibile.
 - Simula crescita su orizzonte da 1 a 30 anni.
 - Considera **capitalizzazione composta**.
@@ -133,7 +133,6 @@ Formato richiesto:
 
 ## 🔮 Possibili sviluppi futuri
 
-* Montecarlo Simulation con **copule**.
 * Integrazione con API bancarie (es. PSD2).
 * Portfolio optimization (es. **Black-Litterman**).
 * Backtest con strategie dinamiche.
