@@ -333,11 +333,11 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
     # =====================
     # Registrazione font DejaVu Unicode
     # =====================
-    pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
-    pdf.add_font("DejaVu", "B", "fonts/DejaVuSans-Bold.ttf", uni=True)
+    pdf.add_font("DejaVu", "", "font/DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVu", "B", "font/DejaVuSans-Bold.ttf", uni=True)
     pdf.set_font("DejaVu", "", 12)
-    pdf.add_font("DejaVu", "I", "fonts/DejaVuSans.ttf", uni=True)
-    pdf.add_font("DejaVu", "BI", "fonts/DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVu", "I", "font/DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVu", "BI", "font/DejaVuSans.ttf", uni=True)
     
     pdf.set_font("DejaVu", "B", 14)
     pdf.cell(0, 10, "Report Finanziario Mensile", ln=True, align="C")
@@ -414,6 +414,7 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
         with open(tmp_pdf.name, "rb") as f:
             pdf_bytes = f.read()
     return pdf_bytes
+
 
 
 
