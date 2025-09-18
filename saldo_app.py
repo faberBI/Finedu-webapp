@@ -169,6 +169,7 @@ if selected_tickers:
 
             # Metriche portafoglio
             metrics = portfolio_metrics(weights, returns_df)
+            st.session_state["metrics"] = metrics
             st.subheader("Metriche Portafoglio")
             for key, value in metrics.items():
                 if key == "Correlation Matrix":
@@ -315,6 +316,7 @@ if st.button("Simula Investimento"):
             'Totale_P50': p50,
             'Totale_P95': p95
         })
+        st.session_state["df_pct"] = df_pct
         csv_bytes = df_pct.to_csv(index=False).encode('utf-8')
         st.download_button("Scarica percentili (CSV)", data=csv_bytes,
                            file_name="simulazione_percentili_tcopula.csv", mime="text/csv")
@@ -323,18 +325,12 @@ if st.button("Simula Investimento"):
 # Pulsante per scaricare il PDF
 # =====================
 if st.button("Scarica PDF report"):
-    percentili_data = None
-    if 'p5' in locals() and 'p50' in locals() and 'p95' in locals():
-        percentili_data = {
-            'Anno': list(range(1, len(p50)+1)),
-            'Totale_P5': p5,
-            'Totale_P50': p50,
-            'Totale_P95': p95
-        }
+    percentili_data = st.session_state['df_pct']
+    metrics = st.session_state['metrics']
     pdf_bytes = create_pdf_report(
         df, 
         st.session_state.get("saldo_annuale", 0),
-        metrics=metrics if 'metrics' in locals() else None,
+        metrics= metrics,
         percentili=percentili_data
     )
     st.download_button(
@@ -343,6 +339,7 @@ if st.button("Scarica PDF report"):
         file_name="report_finanziario.pdf",
         mime="application/pdf"
     )
+
 
 
 
