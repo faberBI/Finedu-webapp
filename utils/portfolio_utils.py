@@ -244,6 +244,11 @@ def plot_efficient_frontier(returns_df, n_portfolios=5000, risk_free=0.02):
 
     return fig
 
+# =====================
+# 7️⃣ Funzione per il calcolo del contributo del singolo titolo
+# =====================
+
+
 def plot_contribution(weights, returns_df):
     mean_returns = returns_df.mean() * 252
     cov_matrix = returns_df.cov() * 252
@@ -276,6 +281,11 @@ def plot_contribution(weights, returns_df):
 from scipy.stats import t as student_t
 from scipy.stats import norm
 
+
+# =====================
+# 8️⃣ Funzione per simulare il portafoglio con metodo copula (t-student)
+# =====================
+
 def simulate_t_copula(mu_ann, sigma_ann, corr, years, n_scenarios, nu=5):
     """
     Simula rendimenti portafoglio con t-copula.
@@ -294,4 +304,71 @@ def simulate_t_copula(mu_ann, sigma_ann, corr, years, n_scenarios, nu=5):
     X = norm.ppf(U)
     draws = mu_ann + sigma_ann * X
     return draws.reshape(n_scenarios, years, n_assets)
+
+
+from fpdf import FPDF
+import plotly.io as pio
+import tempfile
+import base64
+
+# =====================
+# 9️⃣ Funzione per creare PDF del report
+# =====================
+
+def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
+    """
+    Crea un PDF con tutti i principali output della tua app.
+    - df: DataFrame finanziario caricato
+    - saldo_annuale: float
+    - metrics: dizionario metriche portafoglio (opzionale)
+    - figs: lista di plotly figures da inserire
+    """
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "📊 Report Finanziario Mensile", ln=True, align="C")
+    pdf.set_font("Arial", "", 12)
+    pdf.ln(5)
+    
+    # Saldo annuale
+    pdf.multi_cell(0, 8, f"Saldo annuale: €{saldo_annuale:,.2f}")
+    pdf.ln(5)
+    
+    # Tabella riepilogativa (prime 10 righe)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, "Tabella riepilogativa (prime 10 righe)", ln=True)
+    pdf.set_font("Arial", "", 10)
+    cols = df.columns.tolist()
+    for i, row in df.head(10).iterrows():
+        row_str = ", ".join([f"{col}: {row[col]}" for col in cols])
+        pdf.multi_cell(0, 6, row_str)
+    pdf.ln(5)
+    
+    # Metriche portafoglio
+    if metrics:
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 8, "Metriche Portafoglio", ln=True)
+        pdf.set_font("Arial", "", 10)
+        for k, v in metrics.items():
+            if k != "Correlation Matrix":
+                pdf.multi_cell(0, 6, f"{k}: {v:.2f}" if "Ratio" in k or k=="Max Drawdown" else f"{k}: {v:.2%}")
+        pdf.ln(5)
+    
+    # Grafici
+    for fig in figs:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+            img_bytes = pio.to_image(fig, format="png", width=700, height=400, scale=2)
+            tmpfile.write(img_bytes)
+            tmpfile.flush()
+            pdf.image(tmpfile.name, w=180)
+            pdf.ln(5)
+    
+    # Output PDF
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
+        pdf.output(tmp_pdf.name)
+        tmp_pdf.flush()
+        with open(tmp_pdf.name, "rb") as f:
+            pdf_bytes = f.read()
+    return pdf_bytes
 
