@@ -313,47 +313,82 @@ import base64
 import textwrap
 
 # =====================
-# 9️⃣ Funzione per creare PDF del report
+# 9️⃣ Funzione per creare Excel del report
 # =====================
 
-import tempfile
-from fpdf import FPDF
-import textwrap
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.chart import LineChart, Reference, BarChart
 
-def create_pdf_report_investimento(saldo_annuale,metrics= None, simulazione=None):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-
+def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None):
+    """
+    Crea un file Excel con:
+    1. Metriche portafoglio
+    2. Percentili simulazione t-copula
+    3. Grafici di evoluzione mediana e percentili
+    """
+    # Workbook
+    wb = Workbook()
+    
     # =====================
-    # Font Unicode
+    # Sheet: Metriche Portafoglio
     # =====================
-    pdf.add_font("DejaVu", "", "font/DejaVuSans.ttf", uni=True)
-    pdf.add_font("DejaVu", "B", "font/DejaVuSans-Bold.ttf", uni=True)
-    pdf.set_font("DejaVu", "B", 14)
-
-    pdf.cell(0, 10, "Report Finanziario Investimento", ln=True, align="C")
-    pdf.ln(5)
-
+    ws_metrics = wb.active
+    ws_metrics.title = "Metriche Portafoglio"
+    
+    if metrics:
+        metrics_data = []
+        for key, value in metrics.items():
+            if key == "Correlation Matrix":
+                continue
+            metrics_data.append([key, value])
+        df_metrics = pd.DataFrame(metrics_data, columns=["Metrica", "Valore"])
+        for r in dataframe_to_rows(df_metrics, index=False, header=True):
+            ws_metrics.append(r)
+    
     # =====================
-    # Saldo annuale
+    # Sheet: Percentili Simulazione
     # =====================
-    pdf.set_font("DejaVu", "", 12)
-    for line in textwrap.wrap(f"Saldo annuale: €{saldo_annuale:,.2f}", width=80):
-        pdf.multi_cell(0, 8, line)
-    pdf.ln(5)
-
+    if df_pct is not None:
+        ws_pct = wb.create_sheet("Percentili Simulazione")
+        for r in dataframe_to_rows(df_pct, index=False, header=True):
+            ws_pct.append(r)
+        
+        # Grafico linea: Totale P5, P50, P95
+        chart = LineChart()
+        chart.title = "Simulazione t-Copula: Totale"
+        chart.style = 10
+        chart.y_axis.title = 'Valore (€)'
+        chart.x_axis.title = 'Anno'
+        
+        data = Reference(ws_pct, min_col=6, max_col=8, min_row=1, max_row=len(df_pct)+1)
+        cats = Reference(ws_pct, min_col=1, min_row=2, max_row=len(df_pct)+1)
+        chart.add_data(data, titles_from_data=True)
+        chart.set_categories(cats)
+        ws_pct.add_chart(chart, "J2")
+        
+        # Grafico stacked: Capitale + Rendimento P50
+        chart2 = BarChart()
+        chart2.type = "col"
+        chart2.style = 10
+        chart2.title = "Capitale Investito + Rendimento Mediano"
+        chart2.y_axis.title = 'Valore (€)'
+        chart2.x_axis.title = 'Anno'
+        
+        data2 = Reference(ws_pct, min_col=2, max_col=3, min_row=1, max_row=len(df_pct)+1)
+        chart2.add_data(data2, titles_from_data=True)
+        chart2.set_categories(cats)
+        ws_pct.add_chart(chart2, "J20")
+    
     # =====================
-    # Output PDF in bytes
+    # Salvataggio Excel
     # =====================
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
-        pdf.output(tmp_pdf.name)
-        tmp_pdf.flush()
-        with open(tmp_pdf.name, "rb") as f:
-            pdf_bytes = f.read()
-
-    return pdf_bytes
-
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_excel:
+        wb.save(tmp_excel.name)
+        tmp_excel.seek(0)
+        excel_bytes = tmp_excel.read()
+    
+    return excel_bytes
 
 
 
