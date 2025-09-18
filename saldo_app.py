@@ -323,9 +323,7 @@ if st.button("Simula Investimento"):
             'Totale_P95': p95
         })
         st.session_state["df_pct"] = df_pct
-        csv_bytes = df_pct.to_csv(index=False).encode('utf-8')
-        st.download_button("Scarica percentili (CSV)", data=csv_bytes,
-                           file_name="simulazione_percentili_tcopula.csv", mime="text/csv")
+    
 
 # =====================
 # Pulsante per scaricare l'Excel
@@ -358,6 +356,7 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state \
     )
 else:
     st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
+
 
 
 
