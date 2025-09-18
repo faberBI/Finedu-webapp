@@ -318,7 +318,7 @@ import textwrap
 
 def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     """
-    Crea un PDF con tutti i principali output della tua app.
+    Crea un PDF con titolo, saldo annuale, metriche portafoglio e grafici.
     - df: DataFrame finanziario caricato
     - saldo_annuale: float
     - metrics: dizionario metriche portafoglio (opzionale)
@@ -328,7 +328,7 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     
-    # Font Unicode
+    # Font Unicode per evitare problemi
     pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
     pdf.set_font("DejaVu", "", 12)
     
@@ -337,17 +337,7 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     pdf.ln(5)
     
     # Saldo annuale
-    pdf.multi_cell(0, 8, f"Saldo annuale: EUR {saldo_annuale:,.2f}")
-    pdf.ln(5)
-    
-    # Tabella riepilogativa (prime 10 righe)
-    pdf.cell(0, 8, "Tabella riepilogativa (prime 10 righe)", ln=True)
-    cols = df.columns.tolist()
-    for i, row in df.head(10).iterrows():
-        # Wrap testo per evitare errori FPDF su righe lunghe
-        row_str = ", ".join([f"{col}: {row[col]}" for col in cols])
-        wrapped_text = "\n".join(textwrap.wrap(row_str, width=90))
-        pdf.multi_cell(0, 6, wrapped_text)
+    pdf.multi_cell(0, 8, f"Saldo annuale: €{saldo_annuale:,.2f}")
     pdf.ln(5)
     
     # Metriche portafoglio
@@ -358,11 +348,11 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
         for k, v in metrics.items():
             if k != "Correlation Matrix":
                 line = f"{k}: {v:.2f}" if "Ratio" in k or k=="Max Drawdown" else f"{k}: {v:.2%}"
-                wrapped_line = "\n".join(textwrap.wrap(line, width=90))
-                pdf.multi_cell(0, 6, wrapped_line)
+                wrapped_text = "\n".join(textwrap.wrap(line, width=90))
+                pdf.multi_cell(0, 6, wrapped_text)
         pdf.ln(5)
     
-    # Grafici
+    # Grafici Plotly
     for fig in figs:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
             img_bytes = pio.to_image(fig, format="png", width=700, height=400, scale=2)
@@ -371,13 +361,15 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
             pdf.image(tmpfile.name, w=180)
             pdf.ln(5)
     
-    # Output PDF
+    # Output PDF in bytes
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
         pdf.output(tmp_pdf.name)
         tmp_pdf.flush()
         with open(tmp_pdf.name, "rb") as f:
             pdf_bytes = f.read()
+    
     return pdf_bytes
+
 
 
 
