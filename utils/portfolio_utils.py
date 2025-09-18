@@ -316,7 +316,6 @@ import textwrap
 # 9️⃣ Funzione per creare PDF del report
 # =====================
 
-
 def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[]):
     """
     Crea un PDF con i principali output della tua app.
@@ -335,10 +334,6 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
     # =====================
     pdf.add_font("DejaVu", "", "font/DejaVuSans.ttf", uni=True)
     pdf.add_font("DejaVu", "B", "font/DejaVuSans-Bold.ttf", uni=True)
-    pdf.set_font("DejaVu", "", 12)
-    pdf.add_font("DejaVu", "I", "font/DejaVuSans.ttf", uni=True)
-    pdf.add_font("DejaVu", "BI", "font/DejaVuSans.ttf", uni=True)
-    
     pdf.set_font("DejaVu", "B", 14)
     pdf.cell(0, 10, "Report Finanziario Mensile", ln=True, align="C")
     pdf.ln(5)
@@ -347,7 +342,8 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
     # Saldo annuale
     # =====================
     pdf.set_font("DejaVu", "", 12)
-    pdf.multi_cell(0, 8, f"Saldo annuale: €{saldo_annuale:,.2f}")
+    for line in textwrap.wrap(f"Saldo annuale: €{saldo_annuale:,.2f}", width=90):
+        pdf.multi_cell(0, 8, line)
     pdf.ln(5)
 
     # =====================
@@ -356,10 +352,11 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
     pdf.set_font("DejaVu", "B", 12)
     pdf.cell(0, 8, "Tabella riepilogativa (prime 10 righe)", ln=True)
     pdf.set_font("DejaVu", "", 10)
-    cols = df.columns.tolist()
     for i, row in df.head(10).iterrows():
-        row_str = ", ".join([f"{col}: {row[col]}" for col in cols])
-        pdf.multi_cell(0, 6, row_str)
+        row_str = ", ".join([f"{col}: {row[col]}" for col in df.columns])
+        wrapped_lines = textwrap.wrap(row_str, width=90)
+        for line in wrapped_lines:
+            pdf.multi_cell(0, 6, line)
     pdf.ln(5)
 
     # =====================
@@ -372,7 +369,9 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
         for k, v in metrics.items():
             if k != "Correlation Matrix":
                 line = f"{k}: {v:.2f}" if ("Ratio" in k or k=="Max Drawdown") else f"{k}: {v:.2%}"
-                pdf.multi_cell(0, 6, line)
+                wrapped_lines = textwrap.wrap(line, width=90)
+                for l in wrapped_lines:
+                    pdf.multi_cell(0, 6, l)
         pdf.ln(5)
 
     # =====================
@@ -385,7 +384,9 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
         for i in range(len(percentili)):
             line = f"Anno {percentili['Anno'][i]}: Totale P5={percentili['Totale_P5'][i]:,.2f}, " \
                    f"P50={percentili['Totale_P50'][i]:,.2f}, P95={percentili['Totale_P95'][i]:,.2f}"
-            pdf.multi_cell(0, 6, line)
+            wrapped_lines = textwrap.wrap(line, width=90)
+            for l in wrapped_lines:
+                pdf.multi_cell(0, 6, l)
         pdf.ln(5)
 
     # =====================
@@ -394,7 +395,6 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
     for fig in figs:
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-                # Con Kaleido o Orca, crea immagine PNG
                 img_bytes = fig.to_image(format="png", width=700, height=400, scale=2)
                 tmpfile.write(img_bytes)
                 tmpfile.flush()
@@ -402,7 +402,9 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
                 pdf.ln(5)
         except Exception as e:
             pdf.set_font("DejaVu", "I", 10)
-            pdf.multi_cell(0, 6, f"[Errore inserimento grafico: {e}]")
+            wrapped_lines = textwrap.wrap(f"[Errore inserimento grafico: {e}]", width=90)
+            for l in wrapped_lines:
+                pdf.multi_cell(0, 6, l)
             pdf.ln(5)
 
     # =====================
@@ -414,6 +416,7 @@ def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[])
         with open(tmp_pdf.name, "rb") as f:
             pdf_bytes = f.read()
     return pdf_bytes
+
 
 
 
