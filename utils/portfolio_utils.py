@@ -312,76 +312,109 @@ import tempfile
 import base64
 import textwrap
 
-
 # =====================
-# 9️⃣ Funzione per creare PDF del report compatibile Streamlit Cloud
+# 9️⃣ Funzione per creare PDF del report
 # =====================
 
-def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None):
+
+def create_pdf_report(df, saldo_annuale, metrics=None, percentili=None, figs=[]):
     """
-    Crea un PDF compatibile Streamlit Cloud con:
-    1️⃣ Titolo + saldo annuale
-    3️⃣ Metriche portafoglio (opzionale)
-    4️⃣ Percentili simulazione (opzionale)
-    
-    Args:
-        df: DataFrame finanziario
-        saldo_annuale: float
-        metrics: dict metriche portafoglio
-        percentili: dict con chiavi 'Anno', 'Totale_P5', 'Totale_P50', 'Totale_P95', ecc.
-    
-    Returns:
-        pdf_bytes: PDF pronto per st.download_button
+    Crea un PDF con i principali output della tua app.
+    - df: DataFrame finanziario caricato
+    - saldo_annuale: float
+    - metrics: dizionario metriche portafoglio (opzionale)
+    - percentili: DataFrame con percentili simulazione t-copula (opzionale)
+    - figs: lista di plotly figures da inserire
     """
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    
-    # Font Unicode
+
+    # =====================
+    # Registrazione font DejaVu Unicode
+    # =====================
     pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
-    pdf.set_font("DejaVu", "", 12)
+    pdf.add_font("DejaVu", "B", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", uni=True)
+    pdf.add_font("DejaVu", "I", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf", uni=True)
+    pdf.add_font("DejaVu", "BI", "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf", uni=True)
     
-    # Titolo
-    pdf.cell(0, 10, "📊 Report Finanziario Mensile", ln=True, align="C")
+    pdf.set_font("DejaVu", "B", 14)
+    pdf.cell(0, 10, "Report Finanziario Mensile", ln=True, align="C")
     pdf.ln(5)
-    
+
+    # =====================
     # Saldo annuale
+    # =====================
+    pdf.set_font("DejaVu", "", 12)
     pdf.multi_cell(0, 8, f"Saldo annuale: €{saldo_annuale:,.2f}")
     pdf.ln(5)
-    
+
+    # =====================
+    # Tabella riepilogativa (prime 10 righe)
+    # =====================
+    pdf.set_font("DejaVu", "B", 12)
+    pdf.cell(0, 8, "Tabella riepilogativa (prime 10 righe)", ln=True)
+    pdf.set_font("DejaVu", "", 10)
+    cols = df.columns.tolist()
+    for i, row in df.head(10).iterrows():
+        row_str = ", ".join([f"{col}: {row[col]}" for col in cols])
+        pdf.multi_cell(0, 6, row_str)
+    pdf.ln(5)
+
+    # =====================
     # Metriche portafoglio
+    # =====================
     if metrics:
         pdf.set_font("DejaVu", "B", 12)
         pdf.cell(0, 8, "Metriche Portafoglio", ln=True)
-        pdf.set_font("DejaVu", "", 12)
+        pdf.set_font("DejaVu", "", 10)
         for k, v in metrics.items():
             if k != "Correlation Matrix":
-                line = f"{k}: {v:.2f}" if "Ratio" in k or k=="Max Drawdown" else f"{k}: {v:.2%}"
-                wrapped_text = "\n".join(textwrap.wrap(line, width=90))
-                pdf.multi_cell(0, 6, wrapped_text)
+                line = f"{k}: {v:.2f}" if ("Ratio" in k or k=="Max Drawdown") else f"{k}: {v:.2%}"
+                pdf.multi_cell(0, 6, line)
         pdf.ln(5)
-    
-    # Percentili simulazione (opzionale)
-    if percentili:
+
+    # =====================
+    # Percentili simulazione t-Copula
+    # =====================
+    if percentili is not None:
         pdf.set_font("DejaVu", "B", 12)
-        pdf.cell(0, 8, "Percentili Simulazione Investimento", ln=True)
-        pdf.set_font("DejaVu", "", 12)
-        headers = list(percentili.keys())
-        n_rows = len(percentili[headers[0]])
-        for i in range(n_rows):
-            row_text = ", ".join([f"{h}: {percentili[h][i]:,.2f}" for h in headers])
-            wrapped_text = "\n".join(textwrap.wrap(row_text, width=90))
-            pdf.multi_cell(0, 6, wrapped_text)
+        pdf.cell(0, 8, "Percentili Simulazione Portafoglio (t-Copula)", ln=True)
+        pdf.set_font("DejaVu", "", 10)
+        for i in range(len(percentili)):
+            line = f"Anno {percentili['Anno'][i]}: Totale P5={percentili['Totale_P5'][i]:,.2f}, " \
+                   f"P50={percentili['Totale_P50'][i]:,.2f}, P95={percentili['Totale_P95'][i]:,.2f}"
+            pdf.multi_cell(0, 6, line)
         pdf.ln(5)
-    
+
+    # =====================
+    # Grafici Plotly
+    # =====================
+    for fig in figs:
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                # Con Kaleido o Orca, crea immagine PNG
+                img_bytes = fig.to_image(format="png", width=700, height=400, scale=2)
+                tmpfile.write(img_bytes)
+                tmpfile.flush()
+                pdf.image(tmpfile.name, w=180)
+                pdf.ln(5)
+        except Exception as e:
+            pdf.set_font("DejaVu", "I", 10)
+            pdf.multi_cell(0, 6, f"[Errore inserimento grafico: {e}]")
+            pdf.ln(5)
+
+    # =====================
     # Output PDF in bytes
+    # =====================
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
         pdf.output(tmp_pdf.name)
         tmp_pdf.flush()
         with open(tmp_pdf.name, "rb") as f:
             pdf_bytes = f.read()
-    
     return pdf_bytes
+
+
 
 
 
