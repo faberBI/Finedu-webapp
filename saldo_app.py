@@ -4,8 +4,14 @@ import plotly.express as px
 from io import BytesIO
 import plotly.graph_objects as go
 import numpy as np   
+
 from utils.portfolio_utils import download_data, calculate_returns, portfolio_metrics, simulate_investment, simulate_t_copula
 from utils.portfolio_utils import plot_cumulative_returns, plot_return_distribution, plot_weights, plot_drawdown, plot_rolling_volatility, plot_correlation_heatmap,plot_risk_contribution, plot_contribution, plot_efficient_frontier
+
+from fpdf import FPDF
+import plotly.io as pio
+import tempfile
+import base64
 
 st.markdown("""
 # 📊 Report Finanziario Mensile
@@ -309,6 +315,29 @@ if st.button("Simula Investimento"):
         csv_bytes = df_pct.to_csv(index=False).encode('utf-8')
         st.download_button("Scarica percentili (CSV)", data=csv_bytes,
                            file_name="simulazione_percentili_tcopula.csv", mime="text/csv")
+
+# =====================
+# Pulsante per scaricare il PDF
+# =====================
+if st.button("Scarica Report PDF"):
+    figs_to_include = []
+    # Inserisci i grafici principali se già calcolati
+    if 'fig1' in locals(): figs_to_include.append(fig1)
+    if 'fig2' in locals(): figs_to_include.append(fig2)
+    if 'fig_saldo' in locals(): figs_to_include.append(fig_saldo)
+    if 'fig_sim' in locals(): figs_to_include.append(fig_sim)
+    if 'fig_stack' in locals(): figs_to_include.append(fig_stack)
+
+    pdf_bytes = create_pdf_report(df, st.session_state.get("saldo_annuale", 0),
+                                  metrics=metrics if 'metrics' in locals() else None,
+                                  figs=figs_to_include)
+    
+    st.download_button(
+        label="Scarica PDF Report",
+        data=pdf_bytes,
+        file_name="report_finanziario.pdf",
+        mime="application/pdf"
+    )
 
 
 
