@@ -5,7 +5,7 @@ from io import BytesIO
 import plotly.graph_objects as go
 import numpy as np   
 
-from utils.portfolio_utils import download_data, calculate_returns, portfolio_metrics, simulate_investment, simulate_t_copula, create_excel_report_completo
+from utils.portfolio_utils import download_data, calculate_returns, portfolio_metrics, simulate_investment, simulate_t_copula, create_excel_report_investimento
 from utils.portfolio_utils import plot_cumulative_returns, plot_return_distribution, plot_weights, plot_drawdown, plot_rolling_volatility, plot_correlation_heatmap,plot_risk_contribution, plot_contribution, plot_efficient_frontier
 
 from fpdf import FPDF
@@ -339,7 +339,7 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state \
 
 
     # Crea il file Excel completo
-    excel_bytes = create_excel_report_completo(saldo,
+    excel_bytes = create_excel_report_investimento(saldo,
         metrics=metrics,
         df_pct=df_pct,
    )
@@ -352,6 +352,7 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state \
     )
 else:
     st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
+
 
 
 
