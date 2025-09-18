@@ -344,19 +344,6 @@ def create_pdf_report_investimento(saldo_annuale,metrics= None, simulazione=None
     pdf.ln(5)
 
     # =====================
-    # Metriche portafoglio
-    # =====================
-    if metrics:
-        pdf.set_font("DejaVu", "B", 12)
-        pdf.cell(0, 8, "Metriche Portafoglio", ln=True)
-        pdf.set_font("DejaVu", "", 10)
-        for k, v in metrics.items():
-            if k != "Correlation Matrix":
-                text = f"{k}: {v:.2f}" if ("Ratio" in k or k=="Max Drawdown") else f"{k}: {v:.2%}"
-                for line in textwrap.wrap(text, width=80):
-                    pdf.multi_cell(0, 6, line)
-        pdf.ln(5)
-    # =====================
     # Output PDF in bytes
     # =====================
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
@@ -366,6 +353,7 @@ def create_pdf_report_investimento(saldo_annuale,metrics= None, simulazione=None
             pdf_bytes = f.read()
 
     return pdf_bytes
+
 
 
 
