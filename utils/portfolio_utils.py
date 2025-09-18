@@ -344,19 +344,18 @@ def create_pdf_report_investimento(saldo_annuale,metrics= None, simulazione=None
     pdf.ln(5)
 
     # =====================
-    # Simulazione investimento
+    # Metriche portafoglio
     # =====================
-    if simulazione is not None:
+    if metrics:
         pdf.set_font("DejaVu", "B", 12)
-        pdf.cell(0, 8, "Simulazione Investimento (Percentili)", ln=True)
+        pdf.cell(0, 8, "Metriche Portafoglio", ln=True)
         pdf.set_font("DejaVu", "", 10)
-        for i in range(len(simulazione)):
-            text = f"Anno {simulazione['Anno'][i]}: P5={simulazione['Totale_P5'][i]:,.2f}, " \
-                   f"P50={simulazione['Totale_P50'][i]:,.2f}, P95={simulazione['Totale_P95'][i]:,.2f}"
-            for line in textwrap.wrap(text, width=80):
-                pdf.multi_cell(0, 6, line)
+        for k, v in metrics.items():
+            if k != "Correlation Matrix":
+                text = f"{k}: {v:.2f}" if ("Ratio" in k or k=="Max Drawdown") else f"{k}: {v:.2%}"
+                for line in textwrap.wrap(text, width=80):
+                    pdf.multi_cell(0, 6, line)
         pdf.ln(5)
-
     # =====================
     # Output PDF in bytes
     # =====================
@@ -367,6 +366,7 @@ def create_pdf_report_investimento(saldo_annuale,metrics= None, simulazione=None
             pdf_bytes = f.read()
 
     return pdf_bytes
+
 
 
 
