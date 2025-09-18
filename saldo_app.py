@@ -194,9 +194,11 @@ if selected_tickers:
             st.plotly_chart(plot_risk_contribution(weights, returns_df))
             st.plotly_chart(plot_efficient_frontier(returns_df))
             st.plotly_chart(plot_contribution(weights, returns_df))
+
 # =====================
 # Simulazione crescita saldo investito
 # =====================
+
 years = st.slider("Anni di investimento", 1, 30, 5)
 if 'returns_df' not in st.session_state:
     st.error("⚠️ Costruisci il portafoglio! .")
@@ -336,22 +338,28 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state \
     metrics = st.session_state["metrics"]
     df_pct = st.session_state["df_pct"]
     returns_df = st.session_state["returns_df"]
+    weights = st.session_state["weights"]
+    selected_tickers = st.session_state["selected_tickers"]
 
-
-    # Crea il file Excel completo
-    excel_bytes = create_excel_report_investimento(saldo,
+    excel_bytes = create_excel_report_investimento(
+        saldo_annuale=saldo,
         metrics=metrics,
         df_pct=df_pct,
-   )
+        returns_df=returns_df,
+        weights=weights,
+        selected_tickers=selected_tickers
+    )
 
     st.download_button(
-        "💾📊💰 Scarica il report in Excel",
+        label="💾📊💰 Scarica Excel report",
         data=excel_bytes,
         file_name="report_finanziario.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 else:
     st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
+
+
 
 
 
