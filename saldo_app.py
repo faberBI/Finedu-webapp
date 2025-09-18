@@ -182,56 +182,127 @@ if selected_tickers:
 # =====================
 # Simulazione crescita saldo investito
 # =====================
-st.subheader("Simulazione Investimento")
-
 years = st.slider("Anni di investimento", 1, 30, 5)
 
 if st.button("Simula Investimento"):
-    saldo_annuale = st.session_state["saldo_annuale"]
     if 'saldo_annuale' not in st.session_state:
         st.error("⚠️ Carica prima il file finanziario per calcolare il saldo annuale.")
     else:
-        # Capitalizzazione composta
-        initial = st.session_state.saldo_annuale
-        # Uso rendimento atteso dal portafoglio se disponibile, altrimenti default 5%
-        r = 0.05
-        if "metrics" in locals() and "Rendimento atteso annuo" in metrics:
-            r = metrics["Rendimento atteso annuo"]
+        initial = float(st.session_state.saldo_annuale)
 
-        valori = [initial * (((1 + r) ** t - 1) / r) for t in range(1, years + 1)]
-        investito = [initial * t for t in range(1, years + 1)]
-        rendimento = [v - i for v, i in zip(valori, investito)]
+        # Parametri simulazione
+        n_scenarios = st.slider("Numero di scenari (simulazioni)", 200, 10000, 2000, step=200)
+        nu = st.slider("Gradi di libertà t-copula (nu)", 2, 30, 5, step=1)
+        random_seed = st.number_input("Seed per riproducibilità (0 = casuale)", min_value=0, value=0, step=1)
+        if random_seed != 0:
+            np.random.seed(int(random_seed))
 
+        # Frequenza dei dati storici
+        ppy = 252  # daily default
+        try:
+            idx = returns_df.index
+            if hasattr(idx, 'inferred_freq') and idx.inferred_freq is not None:
+                if idx.inferred_freq.startswith("W"): ppy = 52
+                elif idx.inferred_freq.startswith("M"): ppy = 12
+                elif idx.inferred_freq.startswith("A"): ppy = 1
+        except Exception:
+            pass
 
-        final_value = valori[-1]
+        # Stime dai dati
+        mu_period = returns_df.mean()
+        sigma_period = returns_df.std(ddof=1)
+        mu_ann = mu_period * ppy
+        sigma_ann = sigma_period * np.sqrt(ppy)
+        corr = returns_df.corr().values
 
-        st.write(f"💰 Se investi il saldo annuale (€{initial:,.2f}) per {years} anni, "
-                 f"il valore finale stimato sarà: €{final_value:,.2f}")
+        # Simulazione rendimenti con t-copula
+        n_assets = len(mu_ann)
+        draws = simulate_t_copula(mu_ann, sigma_ann, corr, years, n_scenarios, nu)
 
-        # Grafico istogramma stacked
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=list(range(1, years + 1)),
-            y=investito,
-            name="Capitale Investito",
-            marker_color="royalblue"
+        # Rendimenti portafoglio (pesi globali)
+        weights_arr = np.array(weights)
+        portf_returns = np.tensordot(draws, weights_arr, axes=([2], [0]))
+
+        # Evoluzione scenari con contributi annuali
+        values = np.zeros((n_scenarios, years + 1))
+        for t in range(1, years + 1):
+            values[:, t] = (values[:, t-1] + initial) * (1.0 + portf_returns[:, t-1])
+
+        # Percentili valore totale
+        p5 = np.percentile(values[:, 1:], 5, axis=0)
+        p50 = np.percentile(values[:, 1:], 50, axis=0)
+        p95 = np.percentile(values[:, 1:], 95, axis=0)
+
+        st.write(f"💰 Valore mediano stimato dopo {years} anni: €{p50[-1]:,.2f}")
+        st.write(f"📊 Percentili finali (5° / 95°): €{p5[-1]:,.2f} / €{p95[-1]:,.2f}")
+
+        # Grafico con banda 5-95
+        years_x = list(range(1, years + 1))
+        fig_sim = go.Figure()
+        fig_sim.add_trace(go.Scatter(x=years_x, y=p50, mode='lines', name='Mediana (50°)'))
+        fig_sim.add_trace(go.Scatter(
+            x=years_x + years_x[::-1],
+            y=list(p95) + list(p5[::-1]),
+            fill='toself',
+            fillcolor='rgba(0,100,80,0.15)',
+            line=dict(color='rgba(255,255,255,0)'),
+            hoverinfo="skip",
+            showlegend=True,
+            name='Banda 5°-95°'
         ))
-        fig.add_trace(go.Bar(
-            x=list(range(1, years + 1)),
-            y=rendimento,
-            name="Rendimento Maturato",
-            marker_color="seagreen"
-        ))
-
-        fig.update_layout(
-            barmode="stack",
-            title="Crescita del portafoglio (Capitale Investito + Rendimento)",
+        fig_sim.update_layout(
+            title=f"Simulazione t-Copula (nu={nu}): andamento valore accumulato",
             xaxis_title="Anno",
             yaxis_title="Valore (€)",
             template="plotly_white"
         )
+        st.plotly_chart(fig_sim, use_container_width=True)
 
-        st.plotly_chart(fig, use_container_width=True)
+        # --- Decomposizione Capitale vs Rendimento ---
+        capitale = np.array([initial * t for t in years_x])
+        rendimento = values[:, 1:] - capitale
+
+        cap_p50 = capitale
+        rend_p5 = np.percentile(rendimento, 5, axis=0)
+        rend_p50 = np.percentile(rendimento, 50, axis=0)
+        rend_p95 = np.percentile(rendimento, 95, axis=0)
+
+        # Grafico stacked mediana
+        fig_stack = go.Figure()
+        fig_stack.add_trace(go.Bar(x=years_x, y=cap_p50, name="Capitale Investito", marker_color="royalblue"))
+        fig_stack.add_trace(go.Bar(x=years_x, y=rend_p50, name="Rendimento (mediano)", marker_color="seagreen"))
+        fig_stack.update_layout(
+            barmode="stack",
+            title="Decomposizione Mediana: Capitale + Rendimento",
+            xaxis_title="Anno",
+            yaxis_title="Valore (€)",
+            template="plotly_white"
+        )
+        st.plotly_chart(fig_stack, use_container_width=True)
+
+        # Statistiche finali
+        final_vals = values[:, -1]
+        st.subheader("Statistiche scenari finali")
+        st.write(f"Media: €{np.mean(final_vals):,.2f}")
+        st.write(f"Mediana: €{np.median(final_vals):,.2f}")
+        st.write(f"Dev Std: €{np.std(final_vals):,.2f}")
+        st.write(f"Min: €{np.min(final_vals):,.2f}  -  Max: €{np.max(final_vals):,.2f}")
+
+        # Download CSV dei percentili
+        df_pct = pd.DataFrame({
+            'Anno': years_x,
+            'Capitale': cap_p50,
+            'Rendimento_P5': rend_p5,
+            'Rendimento_P50': rend_p50,
+            'Rendimento_P95': rend_p95,
+            'Totale_P5': p5,
+            'Totale_P50': p50,
+            'Totale_P95': p95
+        })
+        csv_bytes = df_pct.to_csv(index=False).encode('utf-8')
+        st.download_button("Scarica percentili (CSV)", data=csv_bytes,
+                           file_name="simulazione_percentili_tcopula.csv", mime="text/csv")
+
 
 
 
