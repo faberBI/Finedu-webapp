@@ -322,25 +322,28 @@ if st.button("Simula Investimento"):
 # =====================
 # Pulsante per scaricare il PDF
 # =====================
-if st.button("Scarica Report PDF"):
-    figs_to_include = []
-    # Inserisci i grafici principali se già calcolati
-    if 'fig1' in locals(): figs_to_include.append(fig1)
-    if 'fig2' in locals(): figs_to_include.append(fig2)
-    if 'fig_saldo' in locals(): figs_to_include.append(fig_saldo)
-    if 'fig_sim' in locals(): figs_to_include.append(fig_sim)
-    if 'fig_stack' in locals(): figs_to_include.append(fig_stack)
-
-    pdf_bytes = create_pdf_report(df, st.session_state.get("saldo_annuale", 0),
-                                  metrics=metrics if 'metrics' in locals() else None,
-                                  figs=figs_to_include)
-    
+if st.button("Scarica PDF report"):
+    percentili_data = None
+    if 'p5' in locals() and 'p50' in locals() and 'p95' in locals():
+        percentili_data = {
+            'Anno': list(range(1, len(p50)+1)),
+            'Totale_P5': p5,
+            'Totale_P50': p50,
+            'Totale_P95': p95
+        }
+    pdf_bytes = create_pdf_report(
+        df, 
+        st.session_state.get("saldo_annuale", 0),
+        metrics=metrics if 'metrics' in locals() else None,
+        percentili=percentili_data
+    )
     st.download_button(
-        label="Scarica PDF Report",
+        "Scarica PDF",
         data=pdf_bytes,
         file_name="report_finanziario.pdf",
         mime="application/pdf"
     )
+
 
 
 
