@@ -316,9 +316,21 @@ import textwrap
 # 9️⃣ Funzione per creare PDF del report
 # =====================
 
+# =====================
+# 9️⃣ Funzione per creare PDF del report compatibile Streamlit Cloud
+# =====================
+
+from fpdf import FPDF
+import tempfile
+import textwrap
+
 def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     """
-    Crea un PDF con titolo, saldo annuale, metriche portafoglio e grafici.
+    Crea un PDF con:
+    1️⃣ Titolo + saldo annuale
+    3️⃣ Metriche portafoglio (se presenti)
+    4️⃣ Grafici Plotly (se presenti)
+
     - df: DataFrame finanziario caricato
     - saldo_annuale: float
     - metrics: dizionario metriche portafoglio (opzionale)
@@ -328,7 +340,7 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     
-    # Font Unicode per evitare problemi
+    # Font Unicode
     pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)
     pdf.set_font("DejaVu", "", 12)
     
@@ -355,7 +367,8 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
     # Grafici Plotly
     for fig in figs:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-            img_bytes = pio.to_image(fig, format="png", width=700, height=400, scale=2)
+            # Compatibile Streamlit Cloud: genera PNG in memoria
+            img_bytes = fig.to_image(format="png")
             tmpfile.write(img_bytes)
             tmpfile.flush()
             pdf.image(tmpfile.name, w=180)
@@ -369,6 +382,8 @@ def create_pdf_report(df, saldo_annuale, metrics=None, figs=[]):
             pdf_bytes = f.read()
     
     return pdf_bytes
+
+
 
 
 
