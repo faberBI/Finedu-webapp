@@ -321,10 +321,6 @@ from fpdf import FPDF
 import textwrap
 
 def create_pdf_report_investimento(saldo_annuale, metrics=None, simulazione=None):
-    from fpdf import FPDF
-    import textwrap
-    import tempfile
-
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
@@ -385,6 +381,7 @@ def create_pdf_report_investimento(saldo_annuale, metrics=None, simulazione=None
             pdf_bytes = f.read()
 
     return pdf_bytes
+
 
 
 
