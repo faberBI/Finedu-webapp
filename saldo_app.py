@@ -19,6 +19,7 @@ from openpyxl.chart import LineChart, Reference, BarChart
 
 import hashlib
 from oauth2client.service_account import ServiceAccountCredentials
+import json
 
 # -----------------------------
 # LOGIN SICURO
@@ -392,6 +393,7 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state \
     )
 else:
     st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
+
 
 
 
