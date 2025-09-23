@@ -17,6 +17,42 @@ from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.chart import LineChart, Reference, BarChart
 
+import hashlib
+from oauth2client.service_account import ServiceAccountCredentials
+
+# -----------------------------
+# LOGIN SICURO
+# -----------------------------
+st.sidebar.title("🔐 Login")
+
+with open("users.json") as f:
+    users = json.load(f)
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def check_login(username, password):
+    return users.get(username) == hash_password(password)
+
+if not st.session_state.logged_in:
+    username_input = st.sidebar.text_input("Username")
+    password_input = st.sidebar.text_input("Password", type="password")
+    if st.sidebar.button("Login"):
+        if check_login(username_input, password_input):
+            st.session_state.logged_in = True
+            st.session_state.username = username_input
+            st.sidebar.success(f"Benvenuto {username_input}")
+        else:
+            st.sidebar.error("Username o password errati")
+else:
+    st.sidebar.success(f"Benvenuto {st.session_state.username}")
+
+
 
 st.markdown("""
 # 📊 Report Finanziario Mensile
@@ -356,6 +392,7 @@ if 'df_pct' in st.session_state and 'metrics' in st.session_state \
     )
 else:
     st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
+
 
 
 
