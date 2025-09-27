@@ -1,4 +1,4 @@
-````markdown
+
 # 📊 Financial Report & Portfolio Simulator
 
 Questo progetto è un **dashboard interattivo in Streamlit** per:
@@ -144,5 +144,5 @@ Formato richiesto:
 * Fabrizio Di Sciorio, PhD
 * Giulia Cartei
 
-```
+
 
