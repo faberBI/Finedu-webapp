@@ -6,6 +6,7 @@ import numpy as np
 import json
 import hashlib
 from io import BytesIO
+from PIL import Image
 
 # Import dalle tue utility
 from utils.portfolio_utils import (
@@ -250,6 +251,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Configura il portafoglio nella sezione precedente per abilitare la simulazione.")
+
 
 
 
