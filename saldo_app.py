@@ -235,5 +235,6 @@ if "returns_df" in st.session_state:
             st.download_button("💾 Scarica Report Excel", data=ex_bytes, file_name="Report_Investimento.xlsx")
 
 else:
-    st.info("Configura il portafoglio nella sezione precedente per abilitare la simulazione.")ss
+    st.info("Configura il portafoglio nella sezione precedente per abilitare la simulazione.")
+
 
