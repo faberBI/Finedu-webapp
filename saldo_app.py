@@ -140,7 +140,7 @@ if all_t:
 # 3. PROIEZIONE MONTE CARLO
 # =====================
 st.divider()
-st.header("3. Proiezione Monte Carlo")
+st.header("3. Proiezione Copula - Monte Carlo")
 
 if "returns_df" in st.session_state:
     y_inv = st.slider("Anni di investimento", 1, 30, 5)
@@ -236,5 +236,6 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Configura il portafoglio nella sezione precedente per abilitare la simulazione.")
+
 
 
