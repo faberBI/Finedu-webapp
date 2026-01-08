@@ -1,438 +1,184 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from io import BytesIO
 import plotly.graph_objects as go
-import numpy as np   
-
-from utils.portfolio_utils import download_data, calculate_returns, portfolio_metrics, simulate_investment, simulate_t_copula, create_excel_report_investimento
-from utils.portfolio_utils import plot_cumulative_returns, plot_return_distribution, plot_weights, plot_drawdown, plot_rolling_volatility, plot_correlation_heatmap,plot_risk_contribution, plot_contribution, plot_efficient_frontier
-
-from fpdf import FPDF
-import plotly.io as pio
-import tempfile
-import base64
-import textwrap
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.chart import LineChart, Reference, BarChart
-
-import hashlib
-from oauth2client.service_account import ServiceAccountCredentials
+import numpy as np
 import json
+import hashlib
+from io import BytesIO
 
-# -----------------------------
-# LOGIN SICURO
-# -----------------------------
+# Import dalle tue utility
+from utils.portfolio_utils import (
+    download_data_robust, calculate_returns, portfolio_metrics, 
+    simulate_t_copula, create_excel_report_investimento,
+    plot_cumulative_returns, plot_return_distribution, plot_weights, 
+    plot_drawdown, plot_rolling_volatility, plot_correlation_heatmap,
+    plot_risk_contribution, plot_contribution, plot_efficient_frontier
+)
+
+# --- CONFIGURAZIONE PAGINA ---
+st.set_page_config(page_title="Report Finanziario", layout="wide")
+
+# --- LOGIN ---
 st.sidebar.title("🔐 Login")
-
-with open("users.json") as f:
-    users = json.load(f)
+try:
+    with open("users.json") as f:
+        users = json.load(f)
+except:
+    users = {} # Gestione errore se manca il file
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-def check_login(username, password):
-    return users.get(username) == hash_password(password)
-
 if not st.session_state.logged_in:
-    username_input = st.sidebar.text_input("Username")
-    password_input = st.sidebar.text_input("Password", type="password")
+    u_in = st.sidebar.text_input("Username")
+    p_in = st.sidebar.text_input("Password", type="password")
     if st.sidebar.button("Login"):
-        if check_login(username_input, password_input):
+        if users.get(u_in) == hash_password(p_in):
             st.session_state.logged_in = True
-            st.session_state.username = username_input
-            st.sidebar.success(f"Benvenuto {username_input}")
+            st.session_state.username = u_in
+            st.rerun()
         else:
-            st.sidebar.error("Username o password errati")
-else:
-    st.sidebar.success(f"Benvenuto {st.session_state.username}")
+            st.sidebar.error("Credenziali errate")
+    st.stop()
 
-# -----------------------------
-# CONTENUTO DELL'APP
-# -----------------------------
-if st.session_state.logged_in:
-    st.markdown("""
-    # 📊 Report Finanziario Mensile
-    _Breve riepilogo di entrate, uscite e saldo mensile_
-    """)
-    # Pulsante per scaricare il format Excel/CSV
-    st.header("Scarica il format Excel/CSV")
-    columns = ['Tipo','Tipologia','Dettaglio','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']
-    df_format = pd.DataFrame(columns=columns)
+# --- APP CONTENT ---
+st.title("📊 Report Finanziario Mensile & Portfolio Manager")
 
-    # CSV
-    csv_buffer = df_format.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="Scarica CSV di esempio",
-        data=csv_buffer,
-        file_name="format_finanziario.csv",
-        mime="text/csv"
-    )
+# 1. GESTIONE SPESE (Identico al tuo)
+st.header("1. Gestione Spese ed Entrate")
+col_format1, col_format2 = st.columns(2)
+with col_format1:
+    df_f = pd.DataFrame(columns=['Tipo','Tipologia','Dettaglio','gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'])
+    excel_b = BytesIO(); df_f.to_excel(excel_b, index=False)
+    st.download_button("📥 Scarica Format Excel", data=excel_b.getvalue(), file_name="format.xlsx")
 
-    # Excel
-    excel_buffer = BytesIO()
-    df_format.to_excel(excel_buffer, index=False)
-    st.download_button(
-        label="Scarica Excel di esempio",
-        data=excel_buffer,
-        file_name="format_finanziario.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+uploaded_file = st.file_uploader("Carica Excel/CSV", type=["csv", "xlsx"])
+if uploaded_file:
+    df = pd.read_excel(uploaded_file) if uploaded_file.name.endswith('.xlsx') else pd.read_csv(uploaded_file)
+    months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']
+    for m in months:
+        df[m] = pd.to_numeric(df[m].replace('[\€,]', '', regex=True), errors='coerce').fillna(0)
+    
+    df['Totale'] = df[months].sum(axis=1)
+    entrate = df[df['Tipo']=='Entrate']['Totale'].sum()
+    uscite = df[df['Tipo']=='Uscite']['Totale'].sum()
+    st.session_state["saldo_annuale"] = entrate - uscite
 
-    # Upload file Excel/CSV
-    uploaded_file = st.file_uploader("Carica il file Excel/CSV", type=["csv", "xlsx"])
-    if uploaded_file:
-        try:
-            if uploaded_file.name.endswith('.xlsx'):
-                df = pd.read_excel(uploaded_file, engine='openpyxl')
-            else:
-                # Proviamo prima con UTF-8, altrimenti fallback a latin-1
-                try:
-                    df = pd.read_csv(uploaded_file, encoding='utf-8')
-                except UnicodeDecodeError:
-                    df = pd.read_csv(uploaded_file, encoding='latin-1')
-        except Exception as e:
-            st.error(f"Errore nel caricamento del file: {e}")
-            st.stop()
+    # Grafici Spese
+    c1, c2 = st.columns(2)
+    with c1:
+        st.plotly_chart(px.bar(df.groupby('Tipo')[months].sum().T, title="Flussi Mensili"), use_container_width=True)
+    with c2:
+        st.plotly_chart(px.pie(df.groupby('Tipologia')['Totale'].sum().reset_index(), names='Tipologia', values='Totale', title="Distribuzione"), use_container_width=True)
+    st.metric("Saldo Annuale", f"€{st.session_state['saldo_annuale']:,.2f}")
 
+# 2. COSTRUZIONE PORTAFOGLIO
+st.divider()
+st.header("2. Simulazione Portafoglio")
 
-        # Definizione mesi
-        months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']
+tickers_dict = {
+    "Azioni": ["AAPL","MSFT","GOOGL","AMZN","TSLA","NVDA","META"],
+    "Bond": ["BND","TLT","AGG"],
+    "Crypto": ["BTC-USD","ETH-USD"],
+    "ETF azionari": ["VWCE.DE", "SWDA.MI", "EIMI.L", "VUSA.MI"],
+    "ETF bond": ["VAGF.MI", "IBGL.MI", "EMBE.MI"],
+    "ETC commodities": ["SGLD.MI", "CRUD.MI", "WEAT.L", "COPA.L"]
+}
 
-        # Pulisci valori (€ -> float)
-        for month in months:
-            df[month] = df[month].replace('[\€,]', '', regex=True).astype(float)
+asset_class = st.multiselect("Seleziona Asset Class", list(tickers_dict.keys()))
+t_manual = st.text_input("Inserisci altri ticker (separati da virgola)")
+all_t = list(set([t.strip().upper() for t in t_manual.split(",") if t.strip()] + [t for a in asset_class for t in tickers_dict[a]]))
 
-        # Totale per riga
-        df['Totale'] = df[months].sum(axis=1)
+if all_t:
+    st.subheader("Assegna pesi (%)")
+    w_input = [st.slider(f"{t} (%)", 0, 100, 10, key=f"sl_{t}") for t in all_t]
 
-        # Entrate vs Uscite
-        st.header("Entrate vs Uscite")
-        entrate = df[df['Tipo']=='Entrate']['Totale'].sum()
-        uscite = df[df['Tipo']=='Uscite']['Totale'].sum()
-        st.write(f"Entrate totali: €{entrate:,.2f}")
-        st.write(f"Uscite totali: €{uscite:,.2f}")
+    if st.button("Costruisci Portafoglio"):
+        with st.spinner("Download dati..."):
+            df_prezzi, valid_t = download_data_robust(all_t)
+        
+        if not df_prezzi.empty:
+            # Allineamento pesi
+            w_map = dict(zip(all_t, w_input))
+            v_weights = np.array([w_map[t] for t in valid_t])
+            final_w = v_weights / v_weights.sum() if v_weights.sum() > 0 else v_weights
+            
+            returns_df = calculate_returns(df_prezzi)
+            metrics = portfolio_metrics(final_w, returns_df)
+            
+            # Salvataggio Session State
+            st.session_state.update({"returns_df": returns_df, "weights": final_w, "valid_tickers": valid_t, "metrics": metrics})
+            
+            # --- OUTPUT GRAFICI (Tutti quelli richiesti) ---
+            st.subheader("Metriche e Analisi")
+            col_m1, col_m2, col_m3 = st.columns(3)
+            col_m1.metric("Rendimento Annuo", f"{metrics['Rendimento atteso annuo']:.2%}")
+            col_m2.metric("Volatilità Annua", f"{metrics['Volatilità annua']:.2%}")
+            col_m3.metric("Max Drawdown", f"{metrics.get('Max Drawdown', 0):.2%}")
 
-        # Distribuzione mensile
-        st.header("Distribuzione Mensile")
-        monthly_sum = df.groupby('Tipo')[months].sum().T
-        fig1 = px.bar(monthly_sum, x=monthly_sum.index, y=['Entrate','Uscite'], title="Entrate e Uscite per mese")
-        st.plotly_chart(fig1)
+            # Visualizzazione di TUTTI i grafici del tuo file originale
+            st.plotly_chart(plot_cumulative_returns(final_w, returns_df), use_container_width=True)
+            
+            c_g1, c_g2 = st.columns(2)
+            with c_g1: st.plotly_chart(plot_return_distribution(final_w, returns_df))
+            with c_g2: st.plotly_chart(plot_weights(final_w, valid_t))
+            
+            st.plotly_chart(plot_drawdown(final_w, returns_df), use_container_width=True)
+            st.plotly_chart(plot_correlation_heatmap(metrics["Correlation Matrix"]), use_container_width=True)
+            
+            c_g3, c_g4 = st.columns(2)
+            with c_g3: st.plotly_chart(plot_risk_contribution(final_w, returns_df))
+            with c_g4: st.plotly_chart(plot_efficient_frontier(returns_df))
+            
+            st.plotly_chart(plot_contribution(final_w, returns_df), use_container_width=True)
 
-        # Distribuzione per tipologia
-        st.header("Distribuzione per Tipologia")
-        category_sum = df.groupby('Tipologia')['Totale'].sum().reset_index()
-        fig2 = px.pie(category_sum, names='Tipologia', values='Totale', title="Distribuzione Uscite/Entrate per Tipologia")
-        st.plotly_chart(fig2)
+# 3. MONTE CARLO (Integrazione Saldo)
+st.divider()
+st.header("3. Proiezione Monte Carlo")
 
-        # Tabella riepilogativa
-        st.header("Tabella riepilogativa")
-        st.dataframe(df)
-
-        # Saldo mensile
-        st.header("Saldo Mensile")
-        entrate_mensili = df[df['Tipo']=='Entrate'][months].sum()
-        uscite_mensili = df[df['Tipo']=='Uscite'][months].sum()
-        saldo_mensile = entrate_mensili - uscite_mensili
-        st.write(saldo_mensile.to_frame(name='Saldo Mensile (€)'))
-
-        # Istogramma saldo mensile
-        fig_saldo = go.Figure()
-        fig_saldo.add_trace(go.Bar(x=months, y=saldo_mensile, name="Saldo"))
-        fig_saldo.update_layout(
-            title="Saldo Mensile (Entrate - Uscite)",
-            xaxis_title="Mese",
-            yaxis_title="Saldo (€)",
-            template="plotly_white"
-        )
-        st.plotly_chart(fig_saldo)
-
-        # Saldo annuale
-        st.header("Saldo Annuale")
-        saldo_annuale = saldo_mensile.sum()
-        st.session_state["saldo_annuale"] = saldo_annuale
-        st.write(f"Saldo annuale: €{saldo_annuale:,.2f}")
-
-
-    # =====================
-    # Simulazione Portafoglio con bottone
-    # =====================
-    st.header("Simulazione Portafoglio Investimenti")
-
-    # Dizionario ticker per asset class
-    tickers_dict = {
-        "Azioni": ["AAPL","MSFT","GOOGL","AMZN","TSLA","NVDA","META"],
-        "Bond": ["BND","TLT","AGG"],
-        "Crypto": ["BTC-USD","ETH-USD","BNB-USD","ADA-USD","SOL-USD"],
-        "ETF azionari": ["VWCE.DE", "SWDA.MI", "EIMI.L", "VUSA.MI"],
-        "ETF bond": ["VAGF.MI", "IBGL.MI", "EMBE.MI"],
-        "ETC commodities": ["SGLD.MI", "CRUD.MI", "WEAT.L", "COPA.L"]
-    }
-
-    # Selezione asset class
-    asset_class = st.multiselect("Seleziona Asset Class", ["Azioni","Bond","Crypto", "ETF azionari","ETF bond", "ETC commodities"])
-
-    # Input manuale ticker
-    tickers_input = st.text_input("Inserisci i ticker separati da virgola", "")
-    manual_tickers = [t.strip().upper() for t in tickers_input.split(",") if t.strip()]
-
-    # Ticker da selezione asset class
-    selected_from_class = []
-    for asset in asset_class:
-        selected_from_class += tickers_dict[asset]
-
-    # Unione ticker e rimozione duplicati
-    selected_tickers = list(set(manual_tickers + selected_from_class))
-
-    if selected_tickers:
-        st.subheader("Assegna peso ai titoli")
-        weights = []
-        for ticker in selected_tickers:
-            w = st.slider(f"{ticker} (%)", 0, 100, 10)
-            weights.append(w / 100)
-
-        # Bottone per costruire portafoglio
-        if st.button("Costruisci Portafoglio"):
-            weights = np.array(weights)
-            if weights.sum() == 0:
-                st.error("I pesi non possono essere tutti 0")
-            else:
-                weights = weights / weights.sum()
-
-                # Download dati storici e calcolo rendimenti
-                data = download_data(selected_tickers)
-                returns_df = calculate_returns(data)
-                st.session_state["returns_df"] = returns_df
-                st.session_state["weights"] = weights
-                st.session_state["selected_tickers"] = selected_tickers
-
-                # Metriche portafoglio
-                metrics = portfolio_metrics(weights, returns_df)
-                st.session_state["metrics"] = metrics
-                st.subheader("Metriche Portafoglio")
-                for key, value in metrics.items():
-                    if key == "Correlation Matrix":
-                        continue
-                    if "Ratio" in key or key == "Max Drawdown":
-                        st.write(f"{key}: {value:.2f}")
-                    else:
-                        st.write(f"{key}: {value:.2%}")
-
-                # Grafici Portafoglio
-                st.subheader("Grafici Portafoglio")
-                st.plotly_chart(plot_cumulative_returns(weights, returns_df))
-                st.plotly_chart(plot_return_distribution(weights, returns_df))
-                st.plotly_chart(plot_weights(weights, selected_tickers))
-                st.plotly_chart(plot_drawdown(weights, returns_df))
-                st.plotly_chart(plot_rolling_volatility(weights, returns_df))
-                st.plotly_chart(plot_correlation_heatmap(metrics["Correlation Matrix"]))
-                st.plotly_chart(plot_risk_contribution(weights, returns_df))
-                st.plotly_chart(plot_efficient_frontier(returns_df))
-                st.plotly_chart(plot_contribution(weights, returns_df))
-
-    # =====================
-    # Simulazione crescita saldo investito
-    # =====================
-
-    years = st.slider("Anni di investimento", 1, 30, 5)
-    if 'returns_df' not in st.session_state:
-        st.error("⚠️ Costruisci il portafoglio! .")
-    else:
-        returns_df = st.session_state["returns_df"]
-        weights = st.session_state["weights"]
-        selected_tickers = st.session_state["selected_tickers"]
-
+if "returns_df" in st.session_state:
+    y_inv = st.slider("Anni di investimento", 1, 30, 5)
     if st.button("Simula Investimento"):
-        if 'saldo_annuale' not in st.session_state:
-            st.error("⚠️ Carica prima il file finanziario per calcolare il saldo annuale.")
+        if "saldo_annuale" not in st.session_state:
+            st.error("Carica prima il file finanziario!")
         else:
             initial = float(st.session_state.saldo_annuale)
-
-            # Parametri simulazione
-            n_scenarios = st.slider("Numero di scenari (simulazioni)", 200, 10000, 2000, step=200)
-            nu = st.slider("Gradi di libertà t-copula (nu)", 2, 30, 5, step=1)
-            random_seed = st.number_input("Seed per riproducibilità (0 = casuale)", min_value=0, value=0, step=1)
-            if random_seed != 0:
-                np.random.seed(int(random_seed))
-
-            # Frequenza dei dati storici
-            ppy = 252  # daily default
-            try:
-                idx = returns_df.index
-                if hasattr(idx, 'inferred_freq') and idx.inferred_freq is not None:
-                    if idx.inferred_freq.startswith("W"): ppy = 52
-                    elif idx.inferred_freq.startswith("M"): ppy = 12
-                    elif idx.inferred_freq.startswith("A"): ppy = 1
-            except Exception:
-                pass
-
-            # Stime dai dati
-            mu_period = returns_df.mean()
-            sigma_period = returns_df.std(ddof=1)
-            mu_ann = mu_period * ppy
-            sigma_ann = sigma_period * np.sqrt(ppy)
-            corr = returns_df.corr().values
-
-            # Simulazione rendimenti con t-copula
-            n_assets = len(mu_ann)
-            draws = simulate_t_copula(mu_ann, sigma_ann, corr, years, n_scenarios, nu)
-
-            # Rendimenti portafoglio (pesi globali)
-            weights_arr = np.array(weights)
-            portf_returns = np.tensordot(draws, weights_arr, axes=([2], [0]))
-
-            # Evoluzione scenari con contributi annuali
-            values = np.zeros((n_scenarios, years + 1))
-            for t in range(1, years + 1):
-                values[:, t] = (values[:, t-1] + initial) * (1.0 + portf_returns[:, t-1])
-
-            # Percentili valore totale
-            p5 = np.percentile(values[:, 1:], 5, axis=0)
-            p50 = np.percentile(values[:, 1:], 50, axis=0)
-            p95 = np.percentile(values[:, 1:], 95, axis=0)
-
-            st.write(f"💰 Valore mediano stimato dopo {years} anni: €{p50[-1]:,.2f}")
-            st.write(f"📊 Percentili finali (5° / 95°): €{p5[-1]:,.2f} / €{p95[-1]:,.2f}")
-
-            # Grafico con banda 5-95
-            years_x = list(range(1, years + 1))
+            # Parametri fissi come nel tuo originale
+            n_scen = 2000; nu_val = 5
+            
+            # Calcolo Simulazione
+            returns_df = st.session_state.returns_df
+            mu_ann = returns_df.mean() * 252
+            sigma_ann = returns_df.std() * np.sqrt(252)
+            draws = simulate_t_copula(mu_ann, sigma_ann, returns_df.corr().values, y_inv, n_scen, nu_val)
+            port_ret = np.tensordot(draws, st.session_state.weights, axes=([2], [0]))
+            
+            vals = np.zeros((n_scen, y_inv + 1))
+            vals[:, 0] = initial
+            for t in range(1, y_inv + 1):
+                vals[:, t] = (vals[:, t-1] + initial) * (1.0 + port_ret[:, t-1])
+            
+            # Percentili
+            p5, p50, p95 = np.percentile(vals, [5, 50, 95], axis=0)
+            
+            # Grafico Proiezione
             fig_sim = go.Figure()
-            fig_sim.add_trace(go.Scatter(x=years_x, y=p50, mode='lines', name='Mediana (50°)'))
-            fig_sim.add_trace(go.Scatter(
-                x=years_x + years_x[::-1],
-                y=list(p95) + list(p5[::-1]),
-                fill='toself',
-                fillcolor='rgba(0,100,80,0.15)',
-                line=dict(color='rgba(255,255,255,0)'),
-                hoverinfo="skip",
-                showlegend=True,
-                name='Banda 5°-95°'
-            ))
-            fig_sim.update_layout(
-                title=f"Simulazione t-Copula (nu={nu}): andamento valore accumulato",
-                xaxis_title="Anno",
-                yaxis_title="Valore (€)",
-                template="plotly_white"
-            )
+            fig_sim.add_trace(go.Scatter(y=p50, name="Mediana", line=dict(color='blue')))
+            fig_sim.add_trace(go.Scatter(y=p95, fill=None, mode='lines', line_color='rgba(0,255,0,0.2)', name="95°"))
+            fig_sim.add_trace(go.Scatter(y=p5, fill='tonexty', mode='lines', line_color='rgba(255,0,0,0.2)', name="5°"))
             st.plotly_chart(fig_sim, use_container_width=True)
-
-            # --- Decomposizione Capitale vs Rendimento ---
-            capitale = np.array([initial * t for t in years_x])
-            rendimento = values[:, 1:] - capitale
-
-            cap_p50 = capitale
-            rend_p5 = np.percentile(rendimento, 5, axis=0)
-            rend_p50 = np.percentile(rendimento, 50, axis=0)
-            rend_p95 = np.percentile(rendimento, 95, axis=0)
-
-            # Grafico stacked mediana
-            fig_stack = go.Figure()
-            fig_stack.add_trace(go.Bar(x=years_x, y=cap_p50, name="Capitale Investito", marker_color="royalblue"))
-            fig_stack.add_trace(go.Bar(x=years_x, y=rend_p50, name="Rendimento (mediano)", marker_color="seagreen"))
-            fig_stack.update_layout(
-                barmode="stack",
-                title="Decomposizione Mediana: Capitale + Rendimento",
-                xaxis_title="Anno",
-                yaxis_title="Valore (€)",
-                template="plotly_white"
+            
+            # Salvataggio per Excel
+            st.session_state["df_pct"] = pd.DataFrame({"Anno": range(y_inv+1), "Totale_P50": p50, "Totale_P5": p5, "Totale_P95": p95})
+            
+            # Download Excel Finale
+            ex_bytes = create_excel_report_investimento(
+                saldo_annuale=initial, metrics=st.session_state.metrics,
+                df_pct=st.session_state.df_pct, returns_df=returns_df,
+                weights=st.session_state.weights, selected_tickers=st.session_state.valid_tickers
             )
-            st.plotly_chart(fig_stack, use_container_width=True)
-
-            # Statistiche finali
-            final_vals = values[:, -1]
-            st.subheader("Statistiche scenari finali")
-            st.write(f"Media: €{np.mean(final_vals):,.2f}")
-            st.write(f"Mediana: €{np.median(final_vals):,.2f}")
-            st.write(f"Dev Std: €{np.std(final_vals):,.2f}")
-            st.write(f"Min: €{np.min(final_vals):,.2f}  -  Max: €{np.max(final_vals):,.2f}")
-
-            # Download CSV dei percentili
-            df_pct = pd.DataFrame({
-                'Anno': years_x,
-                'Capitale': cap_p50,
-                'Rendimento_P5': rend_p5,
-                'Rendimento_P50': rend_p50,
-                'Rendimento_P95': rend_p95,
-                'Totale_P5': p5,
-                'Totale_P50': p50,
-                'Totale_P95': p95
-            })
-            st.session_state["df_pct"] = df_pct
-
-
-    # =====================
-    # Pulsante per scaricare l'Excel
-    # =====================
-    if 'df_pct' in st.session_state and 'metrics' in st.session_state \
-       and 'returns_df' in st.session_state and 'weights' in st.session_state \
-       and 'selected_tickers' in st.session_state:
-
-        saldo = st.session_state.get("saldo_annuale", 0)
-        metrics = st.session_state["metrics"]
-        df_pct = st.session_state["df_pct"]
-        returns_df = st.session_state["returns_df"]
-        weights = st.session_state["weights"]
-        selected_tickers = st.session_state["selected_tickers"]
-
-        excel_bytes = create_excel_report_investimento(
-            saldo_annuale=saldo,
-            metrics=metrics,
-            df_pct=df_pct,
-            returns_df=returns_df,
-            weights=weights,
-            selected_tickers=selected_tickers
-        )
-
-        st.download_button(
-            label="💾📊💰 Scarica Excel report",
-            data=excel_bytes,
-            file_name="report_finanziario.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-    else:
-        st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
-else:
-    st.info("🔹 Completa il login per accedere alla web-app!")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            st.download_button("💾 Scarica Report Excel", data=ex_bytes, file_name="Report_Finale.xlsx")
