@@ -170,10 +170,13 @@ if st.session_state.logged_in:
         "Azioni": ["AAPL","MSFT","GOOGL","AMZN","TSLA","NVDA","META"],
         "Bond": ["BND","TLT","AGG"],
         "Crypto": ["BTC-USD","ETH-USD","BNB-USD","ADA-USD","SOL-USD"]
+        "ETF azionari": ["VWCE.DE", "SWDA.MI", "EIMI.L", "VUSA.MI"],
+        "ETF bond": ["VAGF.MI", "IBGL.MI", "EMBE.MI", "IUST.MI"],
+        "ETC commodities": ["SGLD.MI", "CRUD.MI", "WEAT.L", "COPA.L"]
     }
 
     # Selezione asset class
-    asset_class = st.multiselect("Seleziona Asset Class", ["Azioni","Bond","Crypto"])
+    asset_class = st.multiselect("Seleziona Asset Class", ["Azioni","Bond","Crypto", "ETF azionari","ETF bond", "ETC commodities"])
 
     # Input manuale ticker
     tickers_input = st.text_input("Inserisci i ticker separati da virgola", "")
@@ -396,6 +399,7 @@ if st.session_state.logged_in:
         st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
 else:
     st.info("🔹 Completa il login per accedere alla web-app!")
+
 
 
 
