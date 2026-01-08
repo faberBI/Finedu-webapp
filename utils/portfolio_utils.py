@@ -6,7 +6,7 @@ import plotly.express as px
 # =========================
 # 1️⃣ Download dati storici
 # =========================
-def download_data_robust(tickers, start="2020-01-01"):
+def download_data(tickers, start="2020-01-01"):
     if not tickers:
         return pd.DataFrame(), []
     
@@ -466,6 +466,7 @@ def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None, r
         excel_bytes = tmp_excel.read()
     
     return excel_bytes
+
 
 
 
