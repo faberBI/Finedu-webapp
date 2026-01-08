@@ -6,48 +6,30 @@ import plotly.express as px
 # =========================
 # 1️⃣ Download dati storici
 # =========================
-def download_data(tickers, start="2020-01-01"):
-    if not tickers:
-        return pd.DataFrame(), []
-    
+def download_data_robust(tickers, start="2020-01-01"):
     valid_data = {}
     successful_tickers = []
     
     for ticker in tickers:
         try:
-            # Download singolo ticker
+            # auto_adjust=True è vitale per gli ETF Bond per includere i dividendi
             df = yf.download(ticker, start=start, progress=False, auto_adjust=True)
             
-            # Verifica se il DataFrame è vuoto o ha troppi pochi dati
-            if df.empty or len(df) < 10:
-                st.sidebar.warning(f"⚠️ Ticker {ticker} rimosso: dati insufficienti.")
-                continue
-            
-            # Gestione MultiIndex di yfinance
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-            
-            valid_data[ticker] = df['Close']
-            successful_tickers.append(ticker)
-            
-        except Exception as e:
-            st.sidebar.error(f"❌ Impossibile scaricare {ticker}: {e}")
+            if not df.empty and len(df) > 10:
+                # Pulizia MultiIndex (evita errori nei nomi colonne)
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = df.columns.get_level_values(0)
+                
+                valid_data[ticker] = df['Close']
+                successful_tickers.append(ticker)
+        except Exception:
             continue
             
-    if not valid_data:
-        return pd.DataFrame(), []
-    
-    # Unione dei dati e pulizia finale
-    final_df = pd.DataFrame(valid_data).dropna()
+    # Crea DataFrame e riempie eventuali piccoli buchi (festivi diversi)
+    final_df = pd.DataFrame(valid_data).ffill().dropna()
     return final_df, successful_tickers
 
-# =========================
-# 2️⃣ Calcolo rendimenti
-# =========================
 def calculate_returns(price_df):
-    """
-    Calcola i rendimenti giornalieri dei titoli.
-    """
     return price_df.pct_change().dropna()
 
 # =========================
@@ -466,6 +448,7 @@ def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None, r
         excel_bytes = tmp_excel.read()
     
     return excel_bytes
+
 
 
 
