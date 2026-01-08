@@ -60,52 +60,46 @@ def calculate_returns(price_df):
 # 3️⃣ Metriche portafoglio
 # =========================
 def portfolio_metrics(weights, returns_df, risk_free_rate=0.01):
-    """
-    Calcola le principali metriche di rendimento e rischio di un portafoglio.
-    Restituisce un dizionario con: 
-    - Rendimento annuo atteso
-    - Volatilità annua
-    - Sharpe Ratio
-    - Sortino Ratio
-    - VaR 95%
-    - Expected Shortfall 95%
-    - Maximum Drawdown
-    - Matrice di correlazione titoli
-    """
     weights = np.array(weights)
-    mean_returns = returns_df.mean() * 252  # annualizzato
-    cov_matrix = returns_df.cov() * 252     # annualizzata
     
-    # Rendimento atteso
-    port_return = np.dot(weights, mean_returns)
-    
-    # Volatilità
-    port_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
-    
-    # Sharpe Ratio
-    sharpe = (port_return - risk_free_rate) / port_vol
-    
-    # Rendimenti giornalieri portafoglio
+    # Calcolo rendimenti giornalieri del portafoglio
     port_daily_returns = returns_df.dot(weights)
     
-    # Sortino Ratio
+    # PROTEZIONE: Se non ci sono dati, restituisci metriche a zero
+    if port_daily_returns.empty or port_daily_returns.isnull().all():
+        return {k: 0.0 for k in ["Rendimento atteso annuo", "Volatilità annua", "Sharpe Ratio", "Sortino Ratio", "VaR 95%", "Expected Shortfall 95%", "Max Drawdown"]}
+
+    mean_returns = returns_df.mean() * 252 
+    cov_matrix = returns_df.cov() * 252  
+    
+    port_return = np.dot(weights, mean_returns)
+    port_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+    
+    # Sharpe Ratio con protezione divisione per zero
+    sharpe = (port_return - risk_free_rate) / port_vol if port_vol != 0 else 0
+    
+    # Sortino Ratio con protezione
     negative_returns = port_daily_returns[port_daily_returns < 0]
-    sortino = (port_return - risk_free_rate) / (negative_returns.std() * np.sqrt(252))
+    if len(negative_returns) > 1:
+        downside_std = negative_returns.std() * np.sqrt(252)
+        sortino = (port_return - risk_free_rate) / downside_std if downside_std != 0 else 0
+    else:
+        sortino = 0
     
-    # VaR storico 95%
-    var_95 = np.percentile(port_daily_returns, 5) * np.sqrt(252)
+    # VaR 95% e ES con protezione
+    try:
+        var_95 = np.percentile(port_daily_returns.dropna(), 5) * np.sqrt(252)
+        low_returns = port_daily_returns[port_daily_returns <= np.percentile(port_daily_returns.dropna(), 5)]
+        es_95 = low_returns.mean() * np.sqrt(252) if not low_returns.empty else 0
+    except IndexError:
+        var_95 = 0
+        es_95 = 0
     
-    # Expected Shortfall 95%
-    es_95 = port_daily_returns[port_daily_returns <= np.percentile(port_daily_returns, 5)].mean() * np.sqrt(252)
-    
-    # Maximum Drawdown
+    # Max Drawdown
     cum_returns = (1 + port_daily_returns).cumprod()
     running_max = cum_returns.cummax()
     drawdown = (cum_returns - running_max) / running_max
-    max_drawdown = drawdown.min()
-    
-    # Correlation matrix
-    corr_matrix = returns_df.corr()
+    max_drawdown = drawdown.min() if not drawdown.empty else 0
     
     return {
         "Rendimento atteso annuo": port_return,
@@ -115,9 +109,8 @@ def portfolio_metrics(weights, returns_df, risk_free_rate=0.01):
         "VaR 95%": var_95,
         "Expected Shortfall 95%": es_95,
         "Max Drawdown": max_drawdown,
-        "Correlation Matrix": corr_matrix
+        "Correlation Matrix": returns_df.corr()
     }
-
 # =========================
 # 4️⃣ Cumulato portafoglio
 # =========================
@@ -479,6 +472,7 @@ def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None, r
         excel_bytes = tmp_excel.read()
     
     return excel_bytes
+
 
 
 
