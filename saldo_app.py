@@ -144,14 +144,14 @@ st.header("3. Proiezione Copula - Monte Carlo")
 
 if "returns_df" in st.session_state:
     y_inv = st.slider("Anni di investimento", 1, 30, 5)
+    n_scen = st.slider("Numero di scenari (simulazioni)", 500, 10000, 1000, step=100)
+    nu_val = st.slider("Gradi di libertà t-copula (nu)", 2, 30, 5, step=1)
     
     if st.button("Simula Investimento"):
         if "saldo_annuale" not in st.session_state:
             st.error("⚠️ Carica prima il file finanziario per usare il saldo come base!")
         else:
             initial = float(st.session_state.saldo_annuale)
-            n_scen = 2000
-            nu_val = 5
             years_x = list(range(1, y_inv + 1))
             
             # --- Calcolo Simulazione ---
@@ -236,6 +236,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Configura il portafoglio nella sezione precedente per abilitare la simulazione.")
+
 
 
 
