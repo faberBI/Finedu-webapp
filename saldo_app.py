@@ -20,7 +20,7 @@ from utils.portfolio_utils import (
 # --- CONFIGURAZIONE PAGINA ---
 logo = Image.open("Image/157214392_891863794931335_5614608524370432599_n.jpg")
 
-st.set_page_config(page_title="FinEdu Financial Analysis Tool", page_icon=logo , layout="wide")
+st.set_page_config(page_title="📊FinEdu Financial Analysis Tool📊", page_icon=logo , layout="wide")
 st.markdown("""
 <div style='text-align: center;'>
 """, unsafe_allow_html=True)
@@ -61,7 +61,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 # --- APP CONTENT ---
-st.title("📊 Monthly Fnancial Reporting & Portfolio Management")
+st.title("📊 Monthly Financial Reporting & Portfolio Management")
 
 # 1. GESTIONE SPESE (Identico al tuo)
 st.header("1. Gestione Spese ed Entrate")
@@ -251,6 +251,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Configura il portafoglio nella sezione precedente per abilitare la simulazione.")
+
 
 
 
