@@ -6,46 +6,40 @@ import plotly.express as px
 # =========================
 # 1️⃣ Download dati storici
 # =========================
-def download_data(tickers, start="2020-01-01", end="2025-01-01"):
-    """
-    Scarica i dati e risolve il problema delle colonne multiple 
-    e dei nomi attaccati (MultiIndex).
-    """
-    # Se passi un singolo ticker come stringa invece di una lista, lo trasformiamo in lista
-    if isinstance(tickers, str):
-        tickers = [tickers]
-        
-    all_data = pd.DataFrame()
+def download_data_robust(tickers, start="2020-01-01"):
+    if not tickers:
+        return pd.DataFrame(), []
+    
+    valid_data = {}
+    successful_tickers = []
     
     for ticker in tickers:
-        # Scarichiamo i dati
-        data = yf.download(ticker, start=start, end=end)
-        
-        if data.empty:
-            print(f"Attenzione: Nessun dato trovato per {ticker}")
-            continue
-
-        # 1. RISOLUZIONE MULTIINDEX: 
-        # Se le colonne hanno più livelli (es. 'Adj Close' e 'IEMG'), 
-        # le rendiamo semplici.
-        if isinstance(data.columns, pd.MultiIndex):
-            data.columns = data.columns.get_level_values(0)
-        
-        # 2. SELEZIONE PREZZO:
-        # Usiamo 'Adj Close' se esiste, altrimenti 'Close'
-        if 'Adj Close' in data.columns:
-            series = data['Adj Close']
-        else:
-            series = data['Close']
+        try:
+            # Download singolo ticker
+            df = yf.download(ticker, start=start, progress=False, auto_adjust=True)
             
-        # 3. PULIZIA FINALE:
-        # Assegniamo la serie al nostro DataFrame finale usando il nome del ticker
-        all_data[ticker] = series
-
-    # Rimuoviamo eventuali righe con tutti valori NaN (se presenti)
-    all_data = all_data.dropna(how='all')
+            # Verifica se il DataFrame è vuoto o ha troppi pochi dati
+            if df.empty or len(df) < 10:
+                st.sidebar.warning(f"⚠️ Ticker {ticker} rimosso: dati insufficienti.")
+                continue
+            
+            # Gestione MultiIndex di yfinance
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            
+            valid_data[ticker] = df['Close']
+            successful_tickers.append(ticker)
+            
+        except Exception as e:
+            st.sidebar.error(f"❌ Impossibile scaricare {ticker}: {e}")
+            continue
+            
+    if not valid_data:
+        return pd.DataFrame(), []
     
-    return all_data
+    # Unione dei dati e pulizia finale
+    final_df = pd.DataFrame(valid_data).dropna()
+    return final_df, successful_tickers
 
 # =========================
 # 2️⃣ Calcolo rendimenti
@@ -472,6 +466,7 @@ def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None, r
         excel_bytes = tmp_excel.read()
     
     return excel_bytes
+
 
 
 
