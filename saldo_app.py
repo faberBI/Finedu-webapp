@@ -115,6 +115,10 @@ if all_t:
     if st.button("Costruisci Portafoglio"):
         with st.spinner("Download dati..."):
             df_prezzi, valid_t = download_data_robust(all_t)
+            missing_tickers = list(set(all_t) - set(valid_t))
+            if missing_tickers:
+                st.error(f"❌ Errore: I seguenti ticker non sono stati trovati: {', '.join(missing_tickers)}")
+                st.warning("Controlla la nomenclatura dei titoli o escludili❌")
         
         if not df_prezzi.empty:
             # Allineamento pesi
@@ -251,6 +255,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Configura il portafoglio nella sezione precedente per abilitare la simulazione.")
+
 
 
 
