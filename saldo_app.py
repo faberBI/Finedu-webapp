@@ -171,7 +171,7 @@ if st.session_state.logged_in:
         "Bond": ["BND","TLT","AGG"],
         "Crypto": ["BTC-USD","ETH-USD","BNB-USD","ADA-USD","SOL-USD"],
         "ETF azionari": ["VWCE.DE", "SWDA.MI", "EIMI.L", "VUSA.MI"],
-        "ETF bond": ["VAGF.MI", "IBGL.MI", "EMBE.MI", "IUST.MI"],
+        "ETF bond": ["VAGF.MI", "IBGL.MI", "EMBE.MI"],
         "ETC commodities": ["SGLD.MI", "CRUD.MI", "WEAT.L", "COPA.L"]
     }
 
@@ -399,6 +399,7 @@ if st.session_state.logged_in:
         st.info("🔹 Completa prima la simulazione per abilitare il download dell'Excel.")
 else:
     st.info("🔹 Completa il login per accedere alla web-app!")
+
 
 
 
