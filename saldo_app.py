@@ -138,12 +138,14 @@ if mode == "✍️ Inserimento manuale":
         df[BASE_COLS].to_excel(out, index=False)
         st.download_button("💾 Scarica Excel", out.getvalue(), "dati_finanziari.xlsx")
 
-# ---- CALCOLI ----
+# ---- CALCOLI E DASHBOARD AVANZATA ----
 if df is not None:
+    # Assicuriamoci che tutte le colonne ci siano
     for col in BASE_COLS:
         if col not in df.columns:
             df[col] = 0 if col in MONTHS else ""
 
+    # Pulizia dati: rimuove € e , e converte in float
     for m in MONTHS:
         df[m] = (
             df[m].astype(str)
@@ -152,16 +154,86 @@ if df is not None:
             .fillna(0.0)
         )
 
+    # Totale per riga
     df["Totale"] = df[MONTHS].sum(axis=1)
 
+    # Totali generali
     entrate = df[df["Tipo"] == "Entrate"]["Totale"].sum()
     uscite = df[df["Tipo"] == "Uscite"]["Totale"].sum()
-    st.session_state["saldo_annuale"] = entrate - uscite
+    saldo = entrate - uscite
+    st.session_state["saldo_annuale"] = saldo
 
+    # ---- KPI ANNUALI ----
+    st.subheader("📈 KPI Annuali")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("Saldo Annuale", f"€{saldo:,.2f}")
+    with c2:
+        st.metric("Entrate Totali", f"€{entrate:,.2f}")
+    with c3:
+        st.metric("Uscite Totali", f"€{uscite:,.2f}")
+
+    perc_risparmio = (saldo / entrate * 100) if entrate > 0 else 0
+    st.metric("Percentuale Risparmio", f"{perc_risparmio:.2f}%")
+
+    mese_piu_costoso = df[MONTHS].sum().idxmax()
+    spesa_massima = df[MONTHS].sum().max()
+    st.metric("Mese più Costoso", mese_piu_costoso, f"€{spesa_massima:,.2f}")
+
+    # ---- KPI MENSILI E SALDO CUMULATIVO ----
+    st.subheader("📊 KPI Mensili e Saldo Cumulativo")
+    saldo_cumulativo = []
+    saldo_temp = 0
+    mesi_data = []
+    entrate_mensili = []
+    uscite_mensili = []
+
+    for m in MONTHS:
+        entrate_m = df[df["Tipo"]=="Entrate"][m].sum()
+        uscite_m = df[df["Tipo"]=="Uscite"][m].sum()
+        saldo_m = entrate_m - uscite_m
+        saldo_temp += saldo_m
+        saldo_cumulativo.append(saldo_temp)
+        mesi_data.append(m)
+        entrate_mensili.append(entrate_m)
+        uscite_mensili.append(uscite_m)
+        st.write(f"**{m.capitalize()}**: Entrate €{entrate_m:,.2f}, Uscite €{uscite_m:,.2f}, Saldo €{saldo_m:,.2f}")
+
+    # Grafico Saldo Cumulativo Mensile
+    fig_line = px.line(
+        x=mesi_data, y=saldo_cumulativo,
+        title="Saldo Cumulativo Mensile",
+        markers=True
+    )
+    st.plotly_chart(fig_line, use_container_width=True)
+
+    # ---- GRAFICO BARRA ENTRATE/USCITE ----
+    st.subheader("📊 Entrate vs Uscite Mensili")
+    df_bar = pd.DataFrame({
+        "Mese": mesi_data,
+        "Entrate": entrate_mensili,
+        "Uscite": uscite_mensili
+    })
+    fig_bar = px.bar(
+        df_bar, x="Mese", y=["Entrate", "Uscite"],
+        barmode="group",
+        title="Entrate e Uscite Mensili"
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+    # ---- OBIETTIVO DI RISPARMIO ----
+    st.subheader("🎯 Obiettivo di Risparmio")
+    obiettivo_annuale = st.number_input("Imposta obiettivo risparmio annuale (€)", value=5000)
+    progresso = min(max(int((saldo / obiettivo_annuale) * 100), 0), 100)
+    st.progress(progresso)
+    st.write(f"Percentuale obiettivo raggiunta: {progresso}%")
+
+    # ---- GRAFICI GENERALI ----
+    st.subheader("📊 Distribuzione Tipologie e Flussi")
     c1, c2 = st.columns(2)
     with c1:
         st.plotly_chart(
-            px.bar(df.groupby("Tipo")[MONTHS].sum().T, title="Flussi mensili"),
+            px.bar(df.groupby("Tipo")[MONTHS].sum().T, title="Flussi Mensili"),
             use_container_width=True
         )
     with c2:
@@ -170,12 +242,11 @@ if df is not None:
                 df.groupby("Tipologia")["Totale"].sum().reset_index(),
                 names="Tipologia",
                 values="Totale",
-                title="Distribuzione spese"
+                title="Distribuzione Spese"
             ),
             use_container_width=True
         )
 
-    st.metric("Saldo Annuale", f"€{st.session_state['saldo_annuale']:,.2f}")
 
 # ======================================
 # 2. COSTRUZIONE PORTAFOGLIO
@@ -276,3 +347,4 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
