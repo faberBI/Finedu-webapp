@@ -96,7 +96,7 @@ st.divider()
 st.header("2. Simulazione Portafoglio")
 
 tickers_dict = {
-    "Azioni": ["AAPL","MSFT","GOOGL","AMZN","TSLA","NVDA","META"],
+    "Azioni": ["MSFT","GOOGL","AMZN"],
     "Bond": ["BND","TLT","AGG"],
     "Crypto": ["BTC-USD","ETH-USD"],
     "ETF azionari": ["VWCE.DE", "SWDA.MI", "EIMI.L", "VUSA.MI"],
@@ -255,6 +255,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Configura il portafoglio nella sezione precedente per abilitare la simulazione.")
+
 
 
 
