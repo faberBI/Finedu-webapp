@@ -4,33 +4,26 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import numpy as np
 import json
 import hashlib
 from io import BytesIO
 from PIL import Image
-from st_aggrid import AgGrid, GridOptionsBuilder
-
-from utils.portfolio_utils import (
-    download_data_robust, calculate_returns, portfolio_metrics,
-    simulate_t_copula, create_excel_report_investimento,
-    plot_cumulative_returns, plot_return_distribution, plot_weights,
-    plot_drawdown, plot_correlation_heatmap,
-    plot_risk_contribution, plot_contribution, plot_efficient_frontier
-)
 
 # ======================================
 # CONFIGURAZIONE PAGINA
 # ======================================
 logo = Image.open("Image/157214392_891863794931335_5614608524370432599_n.jpg")
+
 st.set_page_config(
     page_title="📊 FinEdu Financial Analysis Tool",
     page_icon=logo,
     layout="wide"
 )
 
-st.image(logo, width=280)
-st.markdown("<h1 style='text-align:center;'>Risk Situation Room</h1>", unsafe_allow_html=True)
+st.image(logo, width=260)
+st.markdown("<h1 style='text-align:center;'>📊 Risk Situation Room</h1>", unsafe_allow_html=True)
 
 # ======================================
 # LOGIN
@@ -55,7 +48,6 @@ if not st.session_state.logged_in:
     if st.sidebar.button("Login"):
         if USERS.get(u) == hash_password(p):
             st.session_state.logged_in = True
-            st.session_state.username = u
             st.rerun()
         else:
             st.sidebar.error("Credenziali errate")
@@ -64,12 +56,12 @@ if not st.session_state.logged_in:
 # ======================================
 # APP
 # ======================================
-st.title("📊 Monthly Financial Reporting & Portfolio Management")
+st.title("💼 Monthly Financial Reporting & Budget Control")
 
 # ======================================
 # 1. GESTIONE SPESE
 # ======================================
-st.header("1. Gestione Spese ed Entrate")
+st.header("1️⃣ Gestione Spese ed Entrate")
 
 MONTHS = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']
 BASE_COLS = ['Tipo','Tipologia','Dettaglio'] + MONTHS
@@ -83,14 +75,13 @@ def empty_finance_df():
     })
 
 # ---- FORMAT EXCEL ----
-col1, col2 = st.columns(2)
-with col1:
+with st.expander("📥 Template Excel"):
     df_template = pd.DataFrame(columns=BASE_COLS)
     buffer = BytesIO()
     df_template.to_excel(buffer, index=False)
-    st.download_button("📥 Scarica format Excel", buffer.getvalue(), "format.xlsx")
+    st.download_button("Scarica format Excel", buffer.getvalue(), "format.xlsx")
 
-# ---- SCELTA MODALITÀ ----
+# ---- MODALITÀ ----
 mode = st.radio(
     "Modalità di inserimento dati",
     ["📤 Carica Excel / CSV", "✍️ Inserimento manuale"],
@@ -105,37 +96,33 @@ if mode == "📤 Carica Excel / CSV":
     if file:
         df = pd.read_excel(file) if file.name.endswith(".xlsx") else pd.read_csv(file)
 
-# ---- INSERIMENTO MANUALE CON ST.DATA_EDITOR ----
+# ---- INSERIMENTO MANUALE (EXCEL-LIKE) ----
 if mode == "✍️ Inserimento manuale" or df is not None:
     if df is None:
         if "finance_df" not in st.session_state:
             st.session_state.finance_df = empty_finance_df()
         df = st.session_state.finance_df
 
-    # Assicuriamoci che tutte le colonne ci siano
     for col in BASE_COLS:
         if col not in df.columns:
             df[col] = 0 if col in MONTHS else ""
 
-    st.subheader("📋 Inserimento / Modifica dati (Excel-like)")
+    st.subheader("📋 Inserimento dati (stile Excel)")
 
-    # Data editor con righe dinamiche
-    df_edited = st.data_editor(
+    df = st.data_editor(
         df,
-        num_rows="dynamic",  # permette di aggiungere nuove righe
+        num_rows="dynamic",
+        hide_index=True,
         column_config={
             "Tipo": st.column_config.SelectboxColumn(
                 "Tipo", options=["Entrate", "Uscite"]
             ),
-            **{m: st.column_config.NumberColumn(m) for m in MONTHS}
-        },
-        hide_index=True
+            **{m: st.column_config.NumberColumn(m, format="€ %.2f") for m in MONTHS}
+        }
     )
 
-    df = df_edited.copy()
     st.session_state.finance_df = df
 
-    # Bottoni Reset e Download
     c1, c2 = st.columns(2)
     with c1:
         if st.button("🧹 Reset tabella"):
@@ -146,100 +133,135 @@ if mode == "✍️ Inserimento manuale" or df is not None:
         df[BASE_COLS].to_excel(out, index=False)
         st.download_button("💾 Scarica Excel", out.getvalue(), "dati_finanziari.xlsx")
 
-# ---- PULIZIA DATI E CALCOLI ----
+# ======================================
+# CALCOLI
+# ======================================
 if df is not None:
+
     for m in MONTHS:
-        df[m] = (
-            df[m].astype(str)
-            .str.replace(r"[€,]", "", regex=True)
-            .astype(float)
-            .fillna(0.0)
-        )
+        df[m] = pd.to_numeric(df[m], errors="coerce").fillna(0.0)
 
     df["Totale"] = df[MONTHS].sum(axis=1)
-    entrate = df[df["Tipo"] == "Entrate"]["Totale"].sum()
-    uscite = df[df["Tipo"] == "Uscite"]["Totale"].sum()
+
+    entrate = df[df["Tipo"]=="Entrate"]["Totale"].sum()
+    uscite = df[df["Tipo"]=="Uscite"]["Totale"].sum()
     saldo = entrate - uscite
-    st.session_state["saldo_annuale"] = saldo
 
-    # ---- KPI ANNUALI ----
-    st.subheader("📈 KPI Annuali")
+    # ======================================
+    # KPI ANNUALI
+    # ======================================
+    st.header("📈 KPI Annuali")
+
     c1, c2, c3 = st.columns(3)
-    c1.metric("Saldo Annuale", f"€{saldo:,.2f}")
-    c2.metric("Entrate Totali", f"€{entrate:,.2f}")
-    c3.metric("Uscite Totali", f"€{uscite:,.2f}")
-    perc_risparmio = (saldo / entrate * 100) if entrate > 0 else 0
-    st.metric("Percentuale Risparmio", f"{perc_risparmio:.2f}%")
-    mese_piu_costoso = df[MONTHS].sum().idxmax()
-    spesa_massima = df[MONTHS].sum().max()
-    st.metric("Mese più Costoso", mese_piu_costoso, f"€{spesa_massima:,.2f}")
+    c1.metric("💰 Entrate Totali", f"€{entrate:,.0f}")
+    c2.metric("💸 Uscite Totali", f"€{uscite:,.0f}")
+    c3.metric("📊 Saldo Annuale", f"€{saldo:,.0f}")
 
-    # ---- KPI MENSILI E SALDO CUMULATIVO ----
-    st.subheader("📊 KPI Mensili e Saldo Cumulativo")
-    saldo_cumulativo = []
-    saldo_temp = 0
-    mesi_data = []
-    entrate_mensili = []
-    uscite_mensili = []
+    # ---- GAUGE SALDO ----
+    fig_gauge = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=saldo,
+        title={'text': "Saldo Annuale"},
+        gauge={
+            'axis': {'range': [-uscite, entrate]},
+            'bar': {'color': "green"},
+            'steps': [
+                {'range': [-uscite, 0], 'color': "#ffcccc"},
+                {'range': [0, entrate], 'color': "#ccffcc"}
+            ],
+        }
+    ))
+    st.plotly_chart(fig_gauge, use_container_width=True)
+
+    # ======================================
+    # KPI MENSILI
+    # ======================================
+    st.header("📅 KPI Mensili")
+
+    rows = []
+    saldo_cumulativo = 0
 
     for m in MONTHS:
-        entrate_m = df[df["Tipo"]=="Entrate"][m].sum()
-        uscite_m = df[df["Tipo"]=="Uscite"][m].sum()
-        saldo_m = entrate_m - uscite_m
-        saldo_temp += saldo_m
-        saldo_cumulativo.append(saldo_temp)
-        mesi_data.append(m)
-        entrate_mensili.append(entrate_m)
-        uscite_mensili.append(uscite_m)
-        st.write(f"**{m.capitalize()}**: Entrate €{entrate_m:,.2f}, Uscite €{uscite_m:,.2f}, Saldo €{saldo_m:,.2f}")
+        e = df[df["Tipo"]=="Entrate"][m].sum()
+        u = df[df["Tipo"]=="Uscite"][m].sum()
+        s = e - u
+        saldo_cumulativo += s
 
-    fig_line = px.line(x=mesi_data, y=saldo_cumulativo, title="Saldo Cumulativo Mensile", markers=True)
-    st.plotly_chart(fig_line, use_container_width=True)
+        rows.append({
+            "📅 Mese": m.capitalize(),
+            "💰 Entrate": e,
+            "💸 Uscite": u,
+            "📈 Saldo": s,
+            "📊 Cumulativo": saldo_cumulativo,
+            "🚦": "🟢" if s > 1000 else "🟡" if s > 0 else "🔴"
+        })
 
-    fig_bar = px.bar(pd.DataFrame({"Mese": mesi_data, "Entrate": entrate_mensili, "Uscite": uscite_mensili}),
-                     x="Mese", y=["Entrate","Uscite"], barmode="group", title="Entrate e Uscite Mensili")
-    st.plotly_chart(fig_bar, use_container_width=True)
+    kpi_mensili = pd.DataFrame(rows)
 
-    # ---- OBIETTIVO RISPARMIO ----
-    st.subheader("🎯 Obiettivo di Risparmio")
-    obiettivo_annuale = st.number_input("Imposta obiettivo risparmio annuale (€)", value=5000)
-    progresso = min(max(int((saldo / obiettivo_annuale) * 100),0),100)
-    st.progress(progresso)
-    st.write(f"Percentuale obiettivo raggiunta: {progresso}%")
+    st.dataframe(
+        kpi_mensili,
+        use_container_width=True,
+        hide_index=True
+    )
 
-    # ---- KPI PER TIPOLOGIE DI SPESA ----
-    st.subheader("📊 KPI per Tipologia")
-    spesa_per_tipologia = df[df["Tipo"]=="Uscite"].groupby("Tipologia")["Totale"].sum().sort_values(ascending=False)
-    st.dataframe(spesa_per_tipologia)
+    # ---- GRAFICI ----
+    st.header("📊 Analisi Grafica")
 
-    st.subheader("📊 Percentuale sul totale per Tipologia")
-    percentuali = (spesa_per_tipologia / spesa_per_tipologia.sum() * 100).round(2)
-    st.dataframe(percentuali)
+    fig_cum = px.line(
+        kpi_mensili,
+        x="📅 Mese",
+        y="📊 Cumulativo",
+        markers=True,
+        title="Saldo Cumulativo"
+    )
 
-    st.subheader("💡 Top 3 Tipologie di Spesa")
-    top3 = spesa_per_tipologia.head(3)
-    for tip, val in top3.items():
-        st.write(f"{tip}: €{val:,.2f}")
+    fig_flow = px.bar(
+        kpi_mensili,
+        x="📅 Mese",
+        y=["💰 Entrate","💸 Uscite"],
+        barmode="group",
+        title="Entrate vs Uscite"
+    )
 
-    st.subheader("📊 Grafico Spesa Totale per Tipologia")
-    fig_tipologia = px.bar(spesa_per_tipologia.reset_index(), x="Tipologia", y="Totale", text_auto=True,
-                           title="Spesa Totale per Tipologia")
-    st.plotly_chart(fig_tipologia, use_container_width=True)
+    st.plotly_chart(fig_cum, use_container_width=True)
+    st.plotly_chart(fig_flow, use_container_width=True)
 
-    st.subheader("📊 Spesa Mensile per Tipologia")
-    df_mensile = df[df["Tipo"]=="Uscite"].groupby("Tipologia")[MONTHS].sum().T
-    fig_mensile = px.bar(df_mensile, x=df_mensile.index, y=df_mensile.columns, barmode="stack", title="Spesa Mensile per Tipologia")
-    st.plotly_chart(fig_mensile, use_container_width=True)
+    # ======================================
+    # ANALISI SPESE
+    # ======================================
+    st.header("🧠 Analisi Spese")
 
-    # ---- GRAFICI GENERALI ----
-    st.subheader("📊 Distribuzione Tipologie e Flussi")
+    spese_tipologia = (
+        df[df["Tipo"]=="Uscite"]
+        .groupby("Tipologia")["Totale"]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
     c1, c2 = st.columns(2)
-    with c1:
-        st.plotly_chart(px.bar(df.groupby("Tipo")[MONTHS].sum().T, title="Flussi Mensili"), use_container_width=True)
-    with c2:
-        st.plotly_chart(px.pie(df.groupby("Tipologia")["Totale"].sum().reset_index(),
-                               names="Tipologia", values="Totale", title="Distribuzione Spese"), use_container_width=True)
 
+    with c1:
+        st.subheader("📊 Spesa per Tipologia")
+        st.plotly_chart(
+            px.bar(
+                spese_tipologia.reset_index(),
+                x="Tipologia",
+                y="Totale",
+                text_auto=True
+            ),
+            use_container_width=True
+        )
+
+    with c2:
+        st.subheader("🥧 Distribuzione Spese")
+        st.plotly_chart(
+            px.pie(
+                spese_tipologia.reset_index(),
+                names="Tipologia",
+                values="Totale"
+            ),
+            use_container_width=True
+        )
 # ======================================
 # 2. COSTRUZIONE PORTAFOGLIO
 # ======================================
@@ -339,6 +361,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
