@@ -5,7 +5,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import numpy as np
 import json
 import hashlib
 from io import BytesIO
@@ -74,14 +73,12 @@ def empty_finance_df():
         **{m: [0.0] for m in MONTHS}
     })
 
-# ---- FORMAT EXCEL ----
 with st.expander("📥 Template Excel"):
     df_template = pd.DataFrame(columns=BASE_COLS)
     buffer = BytesIO()
     df_template.to_excel(buffer, index=False)
     st.download_button("Scarica format Excel", buffer.getvalue(), "format.xlsx")
 
-# ---- MODALITÀ ----
 mode = st.radio(
     "Modalità di inserimento dati",
     ["📤 Carica Excel / CSV", "✍️ Inserimento manuale"],
@@ -90,13 +87,11 @@ mode = st.radio(
 
 df = None
 
-# ---- UPLOAD ----
 if mode == "📤 Carica Excel / CSV":
     file = st.file_uploader("Carica file", type=["csv", "xlsx"])
     if file:
         df = pd.read_excel(file) if file.name.endswith(".xlsx") else pd.read_csv(file)
 
-# ---- INSERIMENTO MANUALE (EXCEL-LIKE) ----
 if mode == "✍️ Inserimento manuale" or df is not None:
     if df is None:
         if "finance_df" not in st.session_state:
@@ -114,24 +109,12 @@ if mode == "✍️ Inserimento manuale" or df is not None:
         num_rows="dynamic",
         hide_index=True,
         column_config={
-            "Tipo": st.column_config.SelectboxColumn(
-                "Tipo", options=["Entrate", "Uscite"]
-            ),
+            "Tipo": st.column_config.SelectboxColumn("Tipo", options=["Entrate", "Uscite"]),
             **{m: st.column_config.NumberColumn(m, format="€ %.2f") for m in MONTHS}
         }
     )
 
     st.session_state.finance_df = df
-
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("🧹 Reset tabella"):
-            st.session_state.finance_df = empty_finance_df()
-            st.rerun()
-    with c2:
-        out = BytesIO()
-        df[BASE_COLS].to_excel(out, index=False)
-        st.download_button("💾 Scarica Excel", out.getvalue(), "dati_finanziari.xlsx")
 
 # ======================================
 # CALCOLI
@@ -151,80 +134,74 @@ if df is not None:
     # KPI ANNUALI
     # ======================================
     st.header("📈 KPI Annuali")
-
     c1, c2, c3 = st.columns(3)
     c1.metric("💰 Entrate Totali", f"€{entrate:,.0f}")
     c2.metric("💸 Uscite Totali", f"€{uscite:,.0f}")
     c3.metric("📊 Saldo Annuale", f"€{saldo:,.0f}")
-
-    # ---- GAUGE SALDO ----
-    fig_gauge = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=saldo,
-        title={'text': "Saldo Annuale"},
-        gauge={
-            'axis': {'range': [-uscite, entrate]},
-            'bar': {'color': "green"},
-            'steps': [
-                {'range': [-uscite, 0], 'color': "#ffcccc"},
-                {'range': [0, entrate], 'color': "#ccffcc"}
-            ],
-        }
-    ))
-    st.plotly_chart(fig_gauge, use_container_width=True)
 
     # ======================================
     # KPI MENSILI
     # ======================================
     st.header("📅 KPI Mensili")
 
-    rows = []
-    saldo_cumulativo = 0
-
+    rows, saldo_cum = [], 0
     for m in MONTHS:
         e = df[df["Tipo"]=="Entrate"][m].sum()
         u = df[df["Tipo"]=="Uscite"][m].sum()
         s = e - u
-        saldo_cumulativo += s
-
+        saldo_cum += s
         rows.append({
-            "📅 Mese": m.capitalize(),
-            "💰 Entrate": e,
-            "💸 Uscite": u,
-            "📈 Saldo": s,
-            "📊 Cumulativo": saldo_cumulativo,
-            "🚦": "🟢" if s > 1000 else "🟡" if s > 0 else "🔴"
+            "Mese": m.capitalize(),
+            "Entrate": e,
+            "Uscite": u,
+            "Saldo": s,
+            "Cumulativo": saldo_cum
         })
 
     kpi_mensili = pd.DataFrame(rows)
+    st.dataframe(kpi_mensili, use_container_width=True, hide_index=True)
 
-    st.dataframe(
-        kpi_mensili,
-        use_container_width=True,
-        hide_index=True
+    st.plotly_chart(
+        px.line(kpi_mensili, x="Mese", y="Cumulativo", markers=True, title="Saldo cumulativo"),
+        use_container_width=True
     )
 
-    # ---- GRAFICI ----
-    st.header("📊 Analisi Grafica")
+    # ======================================
+    # 🎯 OBIETTIVI ANNUALI + MENSILI
+    # ======================================
+    st.header("🎯 Obiettivi di Risparmio")
 
-    fig_cum = px.line(
-        kpi_mensili,
-        x="📅 Mese",
-        y="📊 Cumulativo",
-        markers=True,
-        title="Saldo Cumulativo"
-    )
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        emer = st.number_input("🛟 Fondo Emergenza (€)", 0, 100000, 6000)
+    with col2:
+        vac = st.number_input("✈️ Vacanze (€)", 0, 50000, 3000)
+    with col3:
+        casa = st.number_input("🏡 Anticipo Casa (€)", 0, 500000, 20000)
 
-    fig_flow = px.bar(
-        kpi_mensili,
-        x="📅 Mese",
-        y=["💰 Entrate","💸 Uscite"],
-        barmode="group",
-        title="Entrate vs Uscite"
-    )
+    targets = {
+        "Fondo Emergenza": emer,
+        "Vacanze": vac,
+        "Anticipo Casa": casa
+    }
 
-    st.plotly_chart(fig_cum, use_container_width=True)
-    st.plotly_chart(fig_flow, use_container_width=True)
+    st.subheader("📆 Obiettivi Mensili")
+
+    risparmio_medio = saldo / 12 if saldo > 0 else 0
+
+    for nome, target in targets.items():
+        target_m = target / 12
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=risparmio_medio,
+            title={'text': f"{nome} – target mensile €{target_m:,.0f}"},
+            gauge={
+                'axis': {'range': [0, target_m]},
+                'bar': {'color': "#3498db"},
+                'steps': [{'range': [0, target_m], 'color': "#ecf0f1"}]
+            }
+        ))
+        st.plotly_chart(fig, use_container_width=True)
 
     # ======================================
     # ANALISI SPESE
@@ -239,29 +216,12 @@ if df is not None:
     )
 
     c1, c2 = st.columns(2)
-
     with c1:
-        st.subheader("📊 Spesa per Tipologia")
-        st.plotly_chart(
-            px.bar(
-                spese_tipologia.reset_index(),
-                x="Tipologia",
-                y="Totale",
-                text_auto=True
-            ),
-            use_container_width=True
-        )
-
+        st.plotly_chart(px.bar(spese_tipologia.reset_index(), x="Tipologia", y="Totale", text_auto=True),
+                         use_container_width=True)
     with c2:
-        st.subheader("🥧 Distribuzione Spese")
-        st.plotly_chart(
-            px.pie(
-                spese_tipologia.reset_index(),
-                names="Tipologia",
-                values="Totale"
-            ),
-            use_container_width=True
-        )
+        st.plotly_chart(px.pie(spese_tipologia.reset_index(), names="Tipologia", values="Totale"),
+                         use_container_width=True)
 # ======================================
 # 2. COSTRUZIONE PORTAFOGLIO
 # ======================================
@@ -361,6 +321,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
