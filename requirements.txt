@@ -3,7 +3,7 @@ streamlit>=1.20.0
 pandas>=2.0.0
 numpy>=1.25.0
 Pillow>=10.0.0
-st-aggrid>=0.4.5
+st-aggrid
 openpyxl>=3.1.2
 
 # Grafici & statistiche
@@ -19,4 +19,5 @@ copulas>=0.8.0
 yfinance>=0.2.27
 fpdf2>=2.7.4
 oauth2client>=4.1.3
+
 
