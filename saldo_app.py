@@ -144,6 +144,16 @@ if mode == "✍️ Inserimento manuale" or df is not None:
     )
 
     st.session_state.finance_df = df
+    # ⬇ Bottone per scaricare il file Excel aggiornato
+    buffer = BytesIO()
+    df.to_excel(buffer, index=False)
+    buffer.seek(0)
+    st.download_button(
+        label="💾 Scarica Excel compilato",
+        data=buffer,
+        file_name="finance_compilato.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # ======================================
 # CALCOLI
@@ -460,6 +470,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
