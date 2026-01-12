@@ -263,8 +263,9 @@ if df is not None:
                 max_value=100,
                 format="%.0f%%"
             )
-        }
-    )
+        })
+    
+   
     # ======================================
     # ANALISI SPESE
     # ======================================
@@ -458,6 +459,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
