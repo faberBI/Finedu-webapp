@@ -359,122 +359,123 @@ if tickers:
         st.plotly_chart(plot_weights(weights, tickers), use_container_width=True)
         st.plotly_chart(plot_risk_contribution(weights, returns_df), use_container_width=True)
 
-# ======================================
-# 3. MONTE CARLO
-# ======================================
-st.divider()
-st.header("3. Proiezione Monte Carlo")
-
-if "returns_df" in st.session_state:
-    years = st.slider("Anni", 1, 30, 5)
-    scen = st.slider("Scenari", 500, 10000, 2000, step=500)
-    nu = st.slider("Gradi di libertà (ν)", 2, 30, 5)
-
-    if st.button("Simula"):
-        if "saldo_annuale" not in st.session_state:
-            st.error("Inserisci prima i dati finanziari")
-            st.stop()
-
-        # Valori iniziali e rendimenti
-        initial = st.session_state.saldo_annuale
-        returns = st.session_state.returns_df
-
-        # Media e deviazione standard annualizzate
-        mu = returns.mean() * 252
-        sigma = returns.std() * np.sqrt(252)
-
-        # Simulazione Monte Carlo con t-copula
-        draws = simulate_t_copula(mu, sigma, returns.corr().values, years, scen, nu)
-
-        # Rendimento del portafoglio
-        port_ret = np.tensordot(draws, st.session_state.weights, axes=([2],[0]))
-
-        # Matrice valori simulati
-        values = np.zeros((scen, years + 1))
-        values[:, 0] = initial
-
-        for t in range(1, years + 1):
-            values[:, t] = (values[:, t - 1] + initial) * (1 + port_ret[:, t - 1])
-
-        # Percentili per bande di confidenza
-        p5, p50, p95 = np.percentile(values[:, 1:], [5, 50, 95], axis=0)
-
-        # Asse X basato sulla lunghezza dei dati
-        x_axis = list(range(1, len(p50) + 1))
-
-        # Grafico Plotly
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=x_axis, y=p50, name="Mediana", line=dict(color="#1f77b4", width=2)))
-        fig.add_trace(go.Scatter(
-            x=x_axis + x_axis[::-1],
-            y=list(p95) + list(p5[::-1]),
-            fill="toself",
-            fillcolor="rgba(31, 119, 180, 0.2)",
-            line=dict(color="rgba(255,255,255,0)"),
-            name="Banda 5–95%"
-        ))
-
-        fig.update_layout(
-            title="Proiezione Monte Carlo del Portafoglio",
-            xaxis_title="Anno",
-            yaxis_title="Valore (€)",
-            template="plotly_white"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # -----------------------------
-        # Decomposizione Capitale vs Rendimento
-        # -----------------------------
-        capitale = np.array([initial * t for t in years_x])
-        rendimento_mediano = p50 - capitale
-
-        fig_stack = go.Figure()
-        fig_stack.add_trace(go.Bar(x=years_x, y=capitale, name="Capitale Investito", marker_color="royalblue"))
-        fig_stack.add_trace(go.Bar(x=years_x, y=rendimento_mediano, name="Rendimento (mediano)", marker_color="seagreen"))
-        fig_stack.update_layout(
-            barmode="stack",
-            title="Decomposizione Mediana: Capitale + Rendimento",
-            xaxis_title="Anno",
-            yaxis_title="Valore (€)",
-            template="plotly_white"
-        )
-        st.plotly_chart(fig_stack, use_container_width=True)
-
-        # -----------------------------
-        # Statistiche Finali
-        # -----------------------------
-        final_vals = values[:, -1]
-        st.subheader("📊 Statistiche scenari finali")
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Media", f"€{np.mean(final_vals):,.2f}")
-        c2.metric("Mediana", f"€{np.median(final_vals):,.2f}")
-        c3.metric("Minimo", f"€{np.min(final_vals):,.2f}")
-        c4.metric("Massimo", f"€{np.max(final_vals):,.2f}")
-        st.write(f"**Deviazione Standard:** €{np.std(final_vals):,.2f}")
-
-        # Salvataggio dati per l'Excel
-        st.session_state["df_pct"] = pd.DataFrame({
-                'Anno': years_x,
-                'Capitale': capitale,
-                'Totale_P5': p5,
-                'Totale_P50': p50,
-                'Totale_P95': p95
-            })
-            
-            # Bottone Excel
-        ex_bytes = create_excel_report_investimento(
-                saldo_annuale=initial, 
-                metrics=st.session_state.metrics,
-                df_pct=st.session_state.df_pct, 
-                returns_df=returns_df,
-                weights=st.session_state.weights, 
-                selected_tickers=st.session_state.valid_tickers
+    # ======================================
+    # 3. MONTE CARLO
+    # ======================================
+    st.divider()
+    st.header("3. Proiezione Monte Carlo")
+    
+    if "returns_df" in st.session_state:
+        years = st.slider("Anni", 1, 30, 5)
+        scen = st.slider("Scenari", 500, 10000, 2000, step=500)
+        nu = st.slider("Gradi di libertà (ν)", 2, 30, 5)
+    
+        if st.button("Simula"):
+            if "saldo_annuale" not in st.session_state:
+                st.error("Inserisci prima i dati finanziari")
+                st.stop()
+    
+            # Valori iniziali e rendimenti
+            initial = st.session_state.saldo_annuale
+            returns = st.session_state.returns_df
+    
+            # Media e deviazione standard annualizzate
+            mu = returns.mean() * 252
+            sigma = returns.std() * np.sqrt(252)
+    
+            # Simulazione Monte Carlo con t-copula
+            draws = simulate_t_copula(mu, sigma, returns.corr().values, years, scen, nu)
+    
+            # Rendimento del portafoglio
+            port_ret = np.tensordot(draws, st.session_state.weights, axes=([2],[0]))
+    
+            # Matrice valori simulati
+            values = np.zeros((scen, years + 1))
+            values[:, 0] = initial
+    
+            for t in range(1, years + 1):
+                values[:, t] = (values[:, t - 1] + initial) * (1 + port_ret[:, t - 1])
+    
+            # Percentili per bande di confidenza
+            p5, p50, p95 = np.percentile(values[:, 1:], [5, 50, 95], axis=0)
+    
+            # Asse X basato sulla lunghezza dei dati
+            x_axis = list(range(1, len(p50) + 1))
+    
+            # Grafico Plotly
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x_axis, y=p50, name="Mediana", line=dict(color="#1f77b4", width=2)))
+            fig.add_trace(go.Scatter(
+                x=x_axis + x_axis[::-1],
+                y=list(p95) + list(p5[::-1]),
+                fill="toself",
+                fillcolor="rgba(31, 119, 180, 0.2)",
+                line=dict(color="rgba(255,255,255,0)"),
+                name="Banda 5–95%"
+            ))
+    
+            fig.update_layout(
+                title="Proiezione Monte Carlo del Portafoglio",
+                xaxis_title="Anno",
+                yaxis_title="Valore (€)",
+                template="plotly_white"
             )
-        st.download_button("💾 Scarica Report Excel", data=ex_bytes, file_name="Report_Investimento.xlsx")
+    
+            st.plotly_chart(fig, use_container_width=True)
+    
+            # -----------------------------
+            # Decomposizione Capitale vs Rendimento
+            # -----------------------------
+            capitale = np.array([initial * t for t in years_x])
+            rendimento_mediano = p50 - capitale
+    
+            fig_stack = go.Figure()
+            fig_stack.add_trace(go.Bar(x=years_x, y=capitale, name="Capitale Investito", marker_color="royalblue"))
+            fig_stack.add_trace(go.Bar(x=years_x, y=rendimento_mediano, name="Rendimento (mediano)", marker_color="seagreen"))
+            fig_stack.update_layout(
+                barmode="stack",
+                title="Decomposizione Mediana: Capitale + Rendimento",
+                xaxis_title="Anno",
+                yaxis_title="Valore (€)",
+                template="plotly_white"
+            )
+            st.plotly_chart(fig_stack, use_container_width=True)
+    
+            # -----------------------------
+            # Statistiche Finali
+            # -----------------------------
+            final_vals = values[:, -1]
+            st.subheader("📊 Statistiche scenari finali")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Media", f"€{np.mean(final_vals):,.2f}")
+            c2.metric("Mediana", f"€{np.median(final_vals):,.2f}")
+            c3.metric("Minimo", f"€{np.min(final_vals):,.2f}")
+            c4.metric("Massimo", f"€{np.max(final_vals):,.2f}")
+            st.write(f"**Deviazione Standard:** €{np.std(final_vals):,.2f}")
+    
+            # Salvataggio dati per l'Excel
+            st.session_state["df_pct"] = pd.DataFrame({
+                    'Anno': years_x,
+                    'Capitale': capitale,
+                    'Totale_P5': p5,
+                    'Totale_P50': p50,
+                    'Totale_P95': p95
+                })
+                
+                # Bottone Excel
+            ex_bytes = create_excel_report_investimento(
+                    saldo_annuale=initial, 
+                    metrics=st.session_state.metrics,
+                    df_pct=st.session_state.df_pct, 
+                    returns_df=returns_df,
+                    weights=st.session_state.weights, 
+                    selected_tickers=st.session_state.valid_tickers
+                )
+            st.download_button("💾 Scarica Report Excel", data=ex_bytes, file_name="Report_Investimento.xlsx")
+    
+    else:
+        st.info("Costruisci prima il portafoglio")
 
-else:
-    st.info("Costruisci prima il portafoglio")
 
 
 
