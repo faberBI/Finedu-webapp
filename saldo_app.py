@@ -9,6 +9,19 @@ import json
 import hashlib
 from io import BytesIO
 from PIL import Image
+from fpdf import FPDF
+import plotly.io as pio
+import tempfile
+import base64
+import textwrap
+from scipy.stats import t as student_t
+from scipy.stats import norm
+import numpy as np
+import yfinance as yf
+
+from portfolio_utils import (download_data_robust, portfolio_metrics, cumulative_portfolio_returns, plot_correlation_heatmap, plot_cumulative_returns, simulate_investment, plot_return_distribution,
+                            plot_correlation_heatmap, plot_rolling_volatility, plot_drawdown, plot_risk_contribution, plot_weights, plot_efficient_frontier, plot_contribution, 
+                            simulate_t_copula, create_excel_report_investimento)
 
 # ======================================
 # CONFIGURAZIONE PAGINA
@@ -373,6 +386,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
