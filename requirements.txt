@@ -16,9 +16,18 @@ Pillow
 # Logging e exception migliori
 rich
 
-
 # OPTIONAL (per future estensioni)
 scipy
+
+# Finanza / dati finanziari
+yfinance
+
+# Extra se serve per leggere Excel
+openpyxl
+
+# Eventuale supporto CSV
+xlrd
+
 
 
 
