@@ -4,12 +4,12 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import numpy as np
 import json
 import hashlib
 from io import BytesIO
 from PIL import Image
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
 
 from utils.portfolio_utils import (
     download_data_robust, calculate_returns, portfolio_metrics,
@@ -30,10 +30,7 @@ st.set_page_config(
 )
 
 st.image(logo, width=280)
-st.markdown(
-    "<h1 style='text-align:center;'>Risk Situation Room</h1>",
-    unsafe_allow_html=True
-)
+st.markdown("<h1 style='text-align:center;'>Risk Situation Room</h1>", unsafe_allow_html=True)
 
 # ======================================
 # LOGIN
@@ -55,7 +52,6 @@ if "logged_in" not in st.session_state:
 if not st.session_state.logged_in:
     u = st.sidebar.text_input("Username")
     p = st.sidebar.text_input("Password", type="password")
-
     if st.sidebar.button("Login"):
         if USERS.get(u) == hash_password(p):
             st.session_state.logged_in = True
@@ -109,22 +105,36 @@ if mode == "📤 Carica Excel / CSV":
     if file:
         df = pd.read_excel(file) if file.name.endswith(".xlsx") else pd.read_csv(file)
 
-# ---- INSERIMENTO MANUALE ----
-if mode == "✍️ Inserimento manuale":
-    if "finance_df" not in st.session_state:
-        st.session_state.finance_df = empty_finance_df()
+# ---- INSERIMENTO MANUALE CON AGGRID ----
+if mode == "✍️ Inserimento manuale" or df is not None:
+    if df is None:
+        if "finance_df" not in st.session_state:
+            st.session_state.finance_df = empty_finance_df()
+        df = st.session_state.finance_df
 
-    df = st.data_editor(
-        st.session_state.finance_df,
-        num_rows="dynamic",
-        use_container_width=True,
-        column_config={
-            "Tipo": st.column_config.SelectboxColumn(
-                "Tipo", options=["Entrate", "Uscite"]
-            )
-        }
+    # Assicuriamoci che tutte le colonne ci siano
+    for col in BASE_COLS:
+        if col not in df.columns:
+            df[col] = 0 if col in MONTHS else ""
+
+    # Configurazione AG Grid
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(editable=True)
+    gb.configure_column("Tipo", cellEditor='agSelectCellEditor', cellEditorParams={'values': ['Entrate','Uscite']})
+    grid_options = gb.build()
+
+    st.subheader("📋 Inserimento / Modifica dati")
+    grid_response = AgGrid(
+        df,
+        gridOptions=grid_options,
+        update_mode=GridUpdateMode.VALUE_CHANGED,
+        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+        fit_columns_on_grid_load=True,
+        height=400,
+        allow_unsafe_jscode=True
     )
 
+    df = grid_response['data']
     st.session_state.finance_df = df
 
     c1, c2 = st.columns(2)
@@ -132,20 +142,13 @@ if mode == "✍️ Inserimento manuale":
         if st.button("🧹 Reset tabella"):
             st.session_state.finance_df = empty_finance_df()
             st.rerun()
-
     with c2:
         out = BytesIO()
         df[BASE_COLS].to_excel(out, index=False)
         st.download_button("💾 Scarica Excel", out.getvalue(), "dati_finanziari.xlsx")
 
-# ---- CALCOLI E DASHBOARD AVANZATA ----
+# ---- PULIZIA DATI E CALCOLI ----
 if df is not None:
-    # Assicuriamoci che tutte le colonne ci siano
-    for col in BASE_COLS:
-        if col not in df.columns:
-            df[col] = 0 if col in MONTHS else ""
-
-    # Pulizia dati: rimuove € e , e converte in float
     for m in MONTHS:
         df[m] = (
             df[m].astype(str)
@@ -154,10 +157,7 @@ if df is not None:
             .fillna(0.0)
         )
 
-    # Totale per riga
     df["Totale"] = df[MONTHS].sum(axis=1)
-
-    # Totali generali
     entrate = df[df["Tipo"] == "Entrate"]["Totale"].sum()
     uscite = df[df["Tipo"] == "Uscite"]["Totale"].sum()
     saldo = entrate - uscite
@@ -166,16 +166,11 @@ if df is not None:
     # ---- KPI ANNUALI ----
     st.subheader("📈 KPI Annuali")
     c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Saldo Annuale", f"€{saldo:,.2f}")
-    with c2:
-        st.metric("Entrate Totali", f"€{entrate:,.2f}")
-    with c3:
-        st.metric("Uscite Totali", f"€{uscite:,.2f}")
-
+    c1.metric("Saldo Annuale", f"€{saldo:,.2f}")
+    c2.metric("Entrate Totali", f"€{entrate:,.2f}")
+    c3.metric("Uscite Totali", f"€{uscite:,.2f}")
     perc_risparmio = (saldo / entrate * 100) if entrate > 0 else 0
     st.metric("Percentuale Risparmio", f"{perc_risparmio:.2f}%")
-
     mese_piu_costoso = df[MONTHS].sum().idxmax()
     spesa_massima = df[MONTHS].sum().max()
     st.metric("Mese più Costoso", mese_piu_costoso, f"€{spesa_massima:,.2f}")
@@ -199,55 +194,52 @@ if df is not None:
         uscite_mensili.append(uscite_m)
         st.write(f"**{m.capitalize()}**: Entrate €{entrate_m:,.2f}, Uscite €{uscite_m:,.2f}, Saldo €{saldo_m:,.2f}")
 
-    # Grafico Saldo Cumulativo Mensile
-    fig_line = px.line(
-        x=mesi_data, y=saldo_cumulativo,
-        title="Saldo Cumulativo Mensile",
-        markers=True
-    )
+    fig_line = px.line(x=mesi_data, y=saldo_cumulativo, title="Saldo Cumulativo Mensile", markers=True)
     st.plotly_chart(fig_line, use_container_width=True)
 
-    # ---- GRAFICO BARRA ENTRATE/USCITE ----
-    st.subheader("📊 Entrate vs Uscite Mensili")
-    df_bar = pd.DataFrame({
-        "Mese": mesi_data,
-        "Entrate": entrate_mensili,
-        "Uscite": uscite_mensili
-    })
-    fig_bar = px.bar(
-        df_bar, x="Mese", y=["Entrate", "Uscite"],
-        barmode="group",
-        title="Entrate e Uscite Mensili"
-    )
+    fig_bar = px.bar(pd.DataFrame({"Mese": mesi_data, "Entrate": entrate_mensili, "Uscite": uscite_mensili}),
+                     x="Mese", y=["Entrate","Uscite"], barmode="group", title="Entrate e Uscite Mensili")
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # ---- OBIETTIVO DI RISPARMIO ----
+    # ---- OBIETTIVO RISPARMIO ----
     st.subheader("🎯 Obiettivo di Risparmio")
     obiettivo_annuale = st.number_input("Imposta obiettivo risparmio annuale (€)", value=5000)
-    progresso = min(max(int((saldo / obiettivo_annuale) * 100), 0), 100)
+    progresso = min(max(int((saldo / obiettivo_annuale) * 100),0),100)
     st.progress(progresso)
     st.write(f"Percentuale obiettivo raggiunta: {progresso}%")
+
+    # ---- KPI PER TIPOLOGIE DI SPESA ----
+    st.subheader("📊 KPI per Tipologia")
+    spesa_per_tipologia = df[df["Tipo"]=="Uscite"].groupby("Tipologia")["Totale"].sum().sort_values(ascending=False)
+    st.dataframe(spesa_per_tipologia)
+
+    st.subheader("📊 Percentuale sul totale per Tipologia")
+    percentuali = (spesa_per_tipologia / spesa_per_tipologia.sum() * 100).round(2)
+    st.dataframe(percentuali)
+
+    st.subheader("💡 Top 3 Tipologie di Spesa")
+    top3 = spesa_per_tipologia.head(3)
+    for tip, val in top3.items():
+        st.write(f"{tip}: €{val:,.2f}")
+
+    st.subheader("📊 Grafico Spesa Totale per Tipologia")
+    fig_tipologia = px.bar(spesa_per_tipologia.reset_index(), x="Tipologia", y="Totale", text_auto=True,
+                           title="Spesa Totale per Tipologia")
+    st.plotly_chart(fig_tipologia, use_container_width=True)
+
+    st.subheader("📊 Spesa Mensile per Tipologia")
+    df_mensile = df[df["Tipo"]=="Uscite"].groupby("Tipologia")[MONTHS].sum().T
+    fig_mensile = px.bar(df_mensile, x=df_mensile.index, y=df_mensile.columns, barmode="stack", title="Spesa Mensile per Tipologia")
+    st.plotly_chart(fig_mensile, use_container_width=True)
 
     # ---- GRAFICI GENERALI ----
     st.subheader("📊 Distribuzione Tipologie e Flussi")
     c1, c2 = st.columns(2)
     with c1:
-        st.plotly_chart(
-            px.bar(df.groupby("Tipo")[MONTHS].sum().T, title="Flussi Mensili"),
-            use_container_width=True
-        )
+        st.plotly_chart(px.bar(df.groupby("Tipo")[MONTHS].sum().T, title="Flussi Mensili"), use_container_width=True)
     with c2:
-        st.plotly_chart(
-            px.pie(
-                df.groupby("Tipologia")["Totale"].sum().reset_index(),
-                names="Tipologia",
-                values="Totale",
-                title="Distribuzione Spese"
-            ),
-            use_container_width=True
-        )
-
-
+        st.plotly_chart(px.pie(df.groupby("Tipologia")["Totale"].sum().reset_index(),
+                               names="Tipologia", values="Totale", title="Distribuzione Spese"), use_container_width=True)
 # ======================================
 # 2. COSTRUZIONE PORTAFOGLIO
 # ======================================
@@ -347,4 +339,5 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
