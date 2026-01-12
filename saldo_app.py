@@ -9,7 +9,7 @@ import json
 import hashlib
 from io import BytesIO
 from PIL import Image
-from streamlit_datagrid import Grid
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 from utils.portfolio_utils import (
     download_data_robust, calculate_returns, portfolio_metrics,
@@ -105,7 +105,7 @@ if mode == "📤 Carica Excel / CSV":
     if file:
         df = pd.read_excel(file) if file.name.endswith(".xlsx") else pd.read_csv(file)
 
-# ---- INSERIMENTO MANUALE CON STREAMLIT-DATAGRID ----
+# ---- INSERIMENTO MANUALE CON ST-AGGRID ----
 if mode == "✍️ Inserimento manuale" or df is not None:
     if df is None:
         if "finance_df" not in st.session_state:
@@ -119,16 +119,23 @@ if mode == "✍️ Inserimento manuale" or df is not None:
 
     st.subheader("📋 Inserimento / Modifica dati")
 
-    # Configura la griglia editabile con streamlit-datagrid
-    grid = Grid(
+    # Configura la griglia editabile con st-aggrid
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(editable=True)
+    gb.configure_column("Tipo", editable=True, cellEditor="agSelectCellEditor", cellEditorParams={"values": ["Entrate","Uscite"]})
+    for m in MONTHS:
+        gb.configure_column(m, type=["numericColumn","numberColumnFilter","customNumericFormat"], editable=True)
+    gridOptions = gb.build()
+
+    grid = AgGrid(
         df,
+        gridOptions=gridOptions,
         height=400,
-        columns_options={
-            "Tipo": {"editable": True, "type": "dropdown", "dropdown": ["Entrate", "Uscite"]},
-            **{m: {"editable": True, "type": "number"} for m in MONTHS}
-        }
+        enable_enterprise_modules=False,
+        update_mode="MODEL_CHANGED"
     )
-    df = grid.edit_df()
+
+    df = pd.DataFrame(grid["data"])
     st.session_state.finance_df = df
 
     # Bottoni Reset e Download
@@ -235,6 +242,7 @@ if df is not None:
     with c2:
         st.plotly_chart(px.pie(df.groupby("Tipologia")["Totale"].sum().reset_index(),
                                names="Tipologia", values="Totale", title="Distribuzione Spese"), use_container_width=True)
+
 # ======================================
 # 2. COSTRUZIONE PORTAFOGLIO
 # ======================================
@@ -334,6 +342,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
