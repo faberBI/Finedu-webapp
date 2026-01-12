@@ -34,7 +34,8 @@ from utils.portfolio_utils import (
     plot_efficient_frontier,
     plot_contribution,
     simulate_t_copula,
-    create_excel_report_investimento
+    create_excel_report_investimento,
+    calculate_returns
 )
 
 
@@ -401,6 +402,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
