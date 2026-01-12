@@ -426,6 +426,8 @@ if tickers:
             # -----------------------------
             # Decomposizione Capitale vs Rendimento
             # -----------------------------
+            # --- DECOMPOSIZIONE CAPITALE VS RENDIMENTO ---
+            years_x = np.arange(1, years + 1)  # Aggiungi questa riga
             capitale = np.array([initial * t for t in years_x])
             rendimento_mediano = p50 - capitale
     
@@ -475,6 +477,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
