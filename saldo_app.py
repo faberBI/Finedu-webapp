@@ -469,7 +469,7 @@ if tickers:
                     saldo_annuale=initial, 
                     metrics=st.session_state.metrics,
                     df_pct=st.session_state.df_pct, 
-                    returns_df=returns_df,
+                    returns_df=returns,
                     weights=st.session_state.weights, 
                     selected_tickers=st.session_state.valid_tickers
                 )
@@ -477,6 +477,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
