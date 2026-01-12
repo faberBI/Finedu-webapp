@@ -105,7 +105,7 @@ if mode == "📤 Carica Excel / CSV":
     if file:
         df = pd.read_excel(file) if file.name.endswith(".xlsx") else pd.read_csv(file)
 
-# ---- INSERIMENTO MANUALE CON ST-AGGRID ----
+# ---- INSERIMENTO MANUALE CON ST.DATA_EDITOR ----
 if mode == "✍️ Inserimento manuale" or df is not None:
     if df is None:
         if "finance_df" not in st.session_state:
@@ -117,25 +117,22 @@ if mode == "✍️ Inserimento manuale" or df is not None:
         if col not in df.columns:
             df[col] = 0 if col in MONTHS else ""
 
-    st.subheader("📋 Inserimento / Modifica dati")
+    st.subheader("📋 Inserimento / Modifica dati (Excel-like)")
 
-    # Configura la griglia editabile con st-aggrid
-    gb = GridOptionsBuilder.from_dataframe(df)
-    gb.configure_default_column(editable=True)
-    gb.configure_column("Tipo", editable=True, cellEditor="agSelectCellEditor", cellEditorParams={"values": ["Entrate","Uscite"]})
-    for m in MONTHS:
-        gb.configure_column(m, type=["numericColumn","numberColumnFilter","customNumericFormat"], editable=True)
-    gridOptions = gb.build()
-
-    grid = AgGrid(
+    # Data editor con righe dinamiche
+    df_edited = st.data_editor(
         df,
-        gridOptions=gridOptions,
-        height=400,
-        enable_enterprise_modules=False,
-        update_mode="MODEL_CHANGED"
+        num_rows="dynamic",  # permette di aggiungere nuove righe
+        column_config={
+            "Tipo": st.column_config.SelectboxColumn(
+                "Tipo", options=["Entrate", "Uscite"]
+            ),
+            **{m: st.column_config.NumberColumn(m) for m in MONTHS}
+        },
+        hide_index=True
     )
 
-    df = pd.DataFrame(grid["data"])
+    df = df_edited.copy()
     st.session_state.finance_df = df
 
     # Bottoni Reset e Download
@@ -342,6 +339,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
