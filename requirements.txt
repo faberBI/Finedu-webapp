@@ -28,6 +28,8 @@ openpyxl
 # Eventuale supporto CSV
 xlrd
 
+# Genera PDF
+fpdf2
 
 
 
