@@ -351,8 +351,13 @@ if tickers:
         })
 
         st.plotly_chart(plot_cumulative_returns(weights, returns), use_container_width=True)
+        st.plotly_chart(plot_rolling_volatility(weights, returns_df, window=21), use_container_width=True)
         st.plotly_chart(plot_drawdown(weights, returns), use_container_width=True)
         st.plotly_chart(plot_correlation_heatmap(metrics["Correlation Matrix"]), use_container_width=True)
+        st.plotly_chart(plot_contribution(weights, returns_df), use_container_width=True)
+        st.plotly_chart(plot_efficient_frontier(returns_df, n_portfolios=5000, risk_free=0.02), use_container_width=True)
+        st.plotly_chart(plot_weights(weights, tickers), use_container_width=True)
+        st.plotly_chart(plot_risk_contribution(weights, returns_df), use_container_width=True)
 
 # ======================================
 # 3. MONTE CARLO
@@ -418,8 +423,41 @@ if "returns_df" in st.session_state:
 
         st.plotly_chart(fig, use_container_width=True)
 
+        # -----------------------------
+        # Decomposizione Capitale vs Rendimento
+        # -----------------------------
+        capitale = np.array([initial * t for t in years_x])
+        rendimento_mediano = p50 - capitale
+
+        fig_stack = go.Figure()
+        fig_stack.add_trace(go.Bar(x=years_x, y=capitale, name="Capitale Investito", marker_color="royalblue"))
+        fig_stack.add_trace(go.Bar(x=years_x, y=rendimento_mediano, name="Rendimento (mediano)", marker_color="seagreen"))
+        fig_stack.update_layout(
+            barmode="stack",
+            title="Decomposizione Mediana: Capitale + Rendimento",
+            xaxis_title="Anno",
+            yaxis_title="Valore (€)",
+            template="plotly_white"
+        )
+        st.plotly_chart(fig_stack, use_container_width=True)
+
+        # -----------------------------
+        # Statistiche Finali
+        # -----------------------------
+        final_vals = values[:, -1]
+        st.subheader("📊 Statistiche scenari finali")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Media", f"€{np.mean(final_vals):,.2f}")
+        c2.metric("Mediana", f"€{np.median(final_vals):,.2f}")
+        c3.metric("Minimo", f"€{np.min(final_vals):,.2f}")
+        c4.metric("Massimo", f"€{np.max(final_vals):,.2f}")
+        st.write(f"**Deviazione Standard:** €{np.std(final_vals):,.2f}")
+
+        
+
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
