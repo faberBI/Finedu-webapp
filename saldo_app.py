@@ -453,10 +453,29 @@ if "returns_df" in st.session_state:
         c4.metric("Massimo", f"€{np.max(final_vals):,.2f}")
         st.write(f"**Deviazione Standard:** €{np.std(final_vals):,.2f}")
 
-        
+        # Salvataggio dati per l'Excel
+        st.session_state["df_pct"] = pd.DataFrame({
+                'Anno': years_x,
+                'Capitale': capitale,
+                'Totale_P5': p5,
+                'Totale_P50': p50,
+                'Totale_P95': p95
+            })
+            
+            # Bottone Excel
+        ex_bytes = create_excel_report_investimento(
+                saldo_annuale=initial, 
+                metrics=st.session_state.metrics,
+                df_pct=st.session_state.df_pct, 
+                returns_df=returns_df,
+                weights=st.session_state.weights, 
+                selected_tickers=st.session_state.valid_tickers
+            )
+        st.download_button("💾 Scarica Report Excel", data=ex_bytes, file_name="Report_Investimento.xlsx")
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
