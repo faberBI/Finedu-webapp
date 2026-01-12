@@ -1,22 +1,23 @@
 # STREAMLIT BASE
-streamlit>=1.25.0,<2.0
+streamlit
 
 # AGGRID COMPONENTE PER STREAMLIT
-streamlit-datagrid>=0.3.0
+streamlit-datagrid
 
 # DATA & ANALISI
-numpy>=1.26.5,<1.27      # compatibile con Python 3.13
-pandas>=2.1.0,<2.2
+numpy
+pandas
 
 # FILE EXCEL / IMMAGINI
-openpyxl>=3.1.2
-Pillow>=10.0.0
+openpyxl
+Pillow
 
 # PLOTTING
-plotly>=5.15.0
+plotly
 
 # UTILS
-rich>=14.2.0
+rich
 
 # OPTIONAL (per future estensioni)
-scipy>=1.11.1  # utile per simulazioni e calcoli statistici
+scipy
+
