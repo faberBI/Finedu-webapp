@@ -351,13 +351,13 @@ if tickers:
         })
 
         st.plotly_chart(plot_cumulative_returns(weights, returns), use_container_width=True)
-        st.plotly_chart(plot_rolling_volatility(weights, returns_df, window=21), use_container_width=True)
+        st.plotly_chart(plot_rolling_volatility(weights, returns, window=21), use_container_width=True)
         st.plotly_chart(plot_drawdown(weights, returns), use_container_width=True)
         st.plotly_chart(plot_correlation_heatmap(metrics["Correlation Matrix"]), use_container_width=True)
-        st.plotly_chart(plot_contribution(weights, returns_df), use_container_width=True)
-        st.plotly_chart(plot_efficient_frontier(returns_df, n_portfolios=5000, risk_free=0.02), use_container_width=True)
+        st.plotly_chart(plot_contribution(weights, returns), use_container_width=True)
+        st.plotly_chart(plot_efficient_frontier(returns, n_portfolios=5000, risk_free=0.02), use_container_width=True)
         st.plotly_chart(plot_weights(weights, tickers), use_container_width=True)
-        st.plotly_chart(plot_risk_contribution(weights, returns_df), use_container_width=True)
+        st.plotly_chart(plot_risk_contribution(weights, returns), use_container_width=True)
 
     # ======================================
     # 3. MONTE CARLO
@@ -475,6 +475,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
