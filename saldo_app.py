@@ -203,6 +203,58 @@ if df is not None:
         ))
         st.plotly_chart(fig, use_container_width=True)
 
+
+    # ======================================
+    # 🎯 OBIETTIVI DI RISPARMIO
+    # ======================================
+    st.header("🎯 Obiettivi di Risparmio")
+
+    st.markdown("Imposta i tuoi obiettivi finanziari e monitora il progresso")
+
+    goals = {
+        "🛟 Fondo Emergenza": st.number_input("Target Fondo Emergenza (€)", 0, 200000, 10000, step=1000),
+        "✈️ Vacanze": st.number_input("Target Vacanze (€)", 0, 50000, 3000, step=500),
+        "🏠 Anticipo Casa": st.number_input("Target Anticipo Casa (€)", 0, 500000, 30000, step=5000),
+    }
+
+    allocazione_annua = saldo if saldo > 0 else 0
+
+    goal_rows = []
+
+    for nome, target in goals.items():
+        progress = min(allocazione_annua / target * 100, 100) if target > 0 else 0
+
+        if progress >= 75:
+            status = "🟢 In linea"
+        elif progress >= 40:
+            status = "🟡 Rallentato"
+        else:
+            status = "🔴 Critico"
+
+        goal_rows.append({
+            "🎯 Obiettivo": nome,
+            "🎯 Target €": target,
+            "💰 Allocato €": allocazione_annua,
+            "📈 Progresso %": progress,
+            "🚦 Stato": status
+        })
+
+    goals_df = pd.DataFrame(goal_rows)
+
+    st.dataframe(
+        goals_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "📈 Progresso %": st.column_config.ProgressColumn(
+                "Progresso",
+                min_value=0,
+                max_value=100,
+                format="%.0f%%"
+            )
+        }
+    )
+
     # ======================================
     # ANALISI SPESE
     # ======================================
@@ -321,6 +373,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
