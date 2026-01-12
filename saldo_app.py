@@ -158,7 +158,7 @@ if df is not None:
     entrate = df[df["Tipo"]=="Entrate"]["Totale"].sum()
     uscite = df[df["Tipo"]=="Uscite"]["Totale"].sum()
     saldo = entrate - uscite
-
+    st.session_state.saldo_annuale = saldo
     # ======================================
     # KPI ANNUALI
     # ======================================
@@ -402,6 +402,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
