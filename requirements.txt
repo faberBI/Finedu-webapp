@@ -2,7 +2,7 @@
 streamlit
 
 # Griglie editabili
-st-aggrid
+streamlit-aggrid
 
 # Analisi dati
 pandas
@@ -19,5 +19,6 @@ rich
 
 # OPTIONAL (per future estensioni)
 scipy
+
 
 
