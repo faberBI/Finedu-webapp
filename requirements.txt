@@ -19,3 +19,4 @@ copulas>=0.8.0
 yfinance>=0.2.27
 fpdf2>=2.7.4
 oauth2client>=4.1.3
+
