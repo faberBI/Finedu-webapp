@@ -9,7 +9,7 @@ import json
 import hashlib
 from io import BytesIO
 from PIL import Image
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
+from streamlit_datagrid import Grid
 
 from utils.portfolio_utils import (
     download_data_robust, calculate_returns, portfolio_metrics,
@@ -105,7 +105,7 @@ if mode == "📤 Carica Excel / CSV":
     if file:
         df = pd.read_excel(file) if file.name.endswith(".xlsx") else pd.read_csv(file)
 
-# ---- INSERIMENTO MANUALE CON AGGRID ----
+# ---- INSERIMENTO MANUALE CON STREAMLIT-DATAGRID ----
 if mode == "✍️ Inserimento manuale" or df is not None:
     if df is None:
         if "finance_df" not in st.session_state:
@@ -117,26 +117,21 @@ if mode == "✍️ Inserimento manuale" or df is not None:
         if col not in df.columns:
             df[col] = 0 if col in MONTHS else ""
 
-    # Configurazione AG Grid
-    gb = GridOptionsBuilder.from_dataframe(df)
-    gb.configure_default_column(editable=True)
-    gb.configure_column("Tipo", cellEditor='agSelectCellEditor', cellEditorParams={'values': ['Entrate','Uscite']})
-    grid_options = gb.build()
-
     st.subheader("📋 Inserimento / Modifica dati")
-    grid_response = AgGrid(
-        df,
-        gridOptions=grid_options,
-        update_mode=GridUpdateMode.VALUE_CHANGED,
-        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-        fit_columns_on_grid_load=True,
-        height=400,
-        allow_unsafe_jscode=True
-    )
 
-    df = grid_response['data']
+    # Configura la griglia editabile con streamlit-datagrid
+    grid = Grid(
+        df,
+        height=400,
+        columns_options={
+            "Tipo": {"editable": True, "type": "dropdown", "dropdown": ["Entrate", "Uscite"]},
+            **{m: {"editable": True, "type": "number"} for m in MONTHS}
+        }
+    )
+    df = grid.edit_df()
     st.session_state.finance_df = df
 
+    # Bottoni Reset e Download
     c1, c2 = st.columns(2)
     with c1:
         if st.button("🧹 Reset tabella"):
@@ -339,5 +334,6 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
