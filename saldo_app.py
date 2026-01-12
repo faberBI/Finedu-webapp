@@ -195,81 +195,63 @@ if df is not None:
         use_container_width=True
     )
 
-    # ======================================
-    # 🎯 OBIETTIVI ANNUALI + MENSILI
-    # ======================================
-    st.header("🎯 Obiettivi di Risparmio")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        emer = st.number_input("🛟 Fondo Emergenza (€)", 0, 100000, 6000)
-    with col2:
-        vac = st.number_input("✈️ Vacanze (€)", 0, 50000, 3000)
-    with col3:
-        casa = st.number_input("🏡 Anticipo Casa (€)", 0, 500000, 20000)
-
-    targets = {
-        "Fondo Emergenza": emer,
-        "Vacanze": vac,
-        "Anticipo Casa": casa
-    }
-
-    st.subheader("📆 Obiettivi Mensili")
-
-    risparmio_medio = saldo / 12 if saldo > 0 else 0
-
-    for nome, target in targets.items():
-        target_m = target / 12
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=risparmio_medio,
-            title={'text': f"{nome} – target mensile €{target_m:,.0f}"},
-            gauge={
-                'axis': {'range': [0, target_m]},
-                'bar': {'color': "#3498db"},
-                'steps': [{'range': [0, target_m], 'color': "#ecf0f1"}]
-            }
-        ))
-        st.plotly_chart(fig, use_container_width=True)
-
-
-    # ======================================
-    # 🎯 OBIETTIVI DI RISPARMIO
+        # ======================================
+    # 🎯 OBIETTIVI DI RISPARMIO (ANNUALI + MENSILI)
     # ======================================
     st.header("🎯 Obiettivi di Risparmio")
-
     st.markdown("Imposta i tuoi obiettivi finanziari e monitora il progresso")
-
+    
+    # --- INPUT TARGET ANNUALI ---
     goals = {
         "🛟 Fondo Emergenza": st.number_input("Target Fondo Emergenza (€)", 0, 200000, 10000, step=1000),
         "✈️ Vacanze": st.number_input("Target Vacanze (€)", 0, 50000, 3000, step=500),
         "🏠 Anticipo Casa": st.number_input("Target Anticipo Casa (€)", 0, 500000, 30000, step=5000),
     }
-
+    
+    # --- CALCOLO RISPARMIO DISPONIBILE ---
     allocazione_annua = saldo if saldo > 0 else 0
-
+    risparmio_medio = allocazione_annua / 12 if allocazione_annua > 0 else 0
+    
+    st.subheader("📆 Obiettivi Mensili (Gauge)")
+    
+    # Mostra i gauge per ciascun obiettivo
+    for nome, target_annuale in goals.items():
+        target_mensile = target_annuale / 12 if target_annuale > 0 else 1  # protezione divisione per zero
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=min(risparmio_medio, target_mensile),  # evita che gauge superi il massimo
+            title={'text': f"{nome} – target mensile €{target_mensile:,.0f}"},
+            gauge={
+                'axis': {'range': [0, target_mensile]},
+                'bar': {'color': "#3498db"},
+                'steps': [{'range': [0, target_mensile], 'color': "#ecf0f1"}]
+            }
+        ))
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # --- CALCOLO PROGRESSO ANNUALE ---
     goal_rows = []
-
-    for nome, target in goals.items():
-        progress = min(allocazione_annua / target * 100, 100) if target > 0 else 0
-
+    for nome, target_annuale in goals.items():
+        progress = min(allocazione_annua / target_annuale * 100, 100) if target_annuale > 0 else 0
+    
         if progress >= 75:
             status = "🟢 In linea"
         elif progress >= 40:
             status = "🟡 Rallentato"
         else:
             status = "🔴 Critico"
-
+    
         goal_rows.append({
             "🎯 Obiettivo": nome,
-            "🎯 Target €": target,
+            "🎯 Target €": target_annuale,
             "💰 Allocato €": allocazione_annua,
             "📈 Progresso %": progress,
             "🚦 Stato": status
         })
-
+    
+    # Mostra tabella con progress bar
     goals_df = pd.DataFrame(goal_rows)
-
+    st.subheader("📊 Stato Obiettivi Annuali")
     st.dataframe(
         goals_df,
         use_container_width=True,
@@ -283,7 +265,6 @@ if df is not None:
             )
         }
     )
-
     # ======================================
     # ANALISI SPESE
     # ======================================
@@ -477,6 +458,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
