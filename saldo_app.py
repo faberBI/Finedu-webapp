@@ -370,38 +370,57 @@ if "returns_df" in st.session_state:
             st.error("Inserisci prima i dati finanziari")
             st.stop()
 
+        # Valori iniziali e rendimenti
         initial = st.session_state.saldo_annuale
         returns = st.session_state.returns_df
 
+        # Media e deviazione standard annualizzate
         mu = returns.mean() * 252
         sigma = returns.std() * np.sqrt(252)
 
-        draws = simulate_t_copula(
-            mu, sigma, returns.corr().values,
-            years, scen, nu
-        )
+        # Simulazione Monte Carlo con t-copula
+        draws = simulate_t_copula(mu, sigma, returns.corr().values, years, scen, nu)
 
+        # Rendimento del portafoglio
         port_ret = np.tensordot(draws, st.session_state.weights, axes=([2],[0]))
 
-        values = np.zeros((scen, years+1))
-        values[:,0] = initial
+        # Matrice valori simulati
+        values = np.zeros((scen, years + 1))
+        values[:, 0] = initial
 
-        for t in range(1, years+1):
-            values[:,t] = (values[:,t-1] + initial) * (1 + port_ret[:,t-1])
+        for t in range(1, years + 1):
+            values[:, t] = (values[:, t - 1] + initial) * (1 + port_ret[:, t - 1])
 
-        p5, p50, p95 = np.percentile(values[:,1:], [5,50,95], axis=0)
+        # Percentili per bande di confidenza
+        p5, p50, p95 = np.percentile(values[:, 1:], [5, 50, 95], axis=0)
 
+        # Asse X basato sulla lunghezza dei dati
+        x_axis = list(range(1, len(p50) + 1))
+
+        # Grafico Plotly
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=range(1,years+1), y=p50, name="Mediana"))
+        fig.add_trace(go.Scatter(x=x_axis, y=p50, name="Mediana", line=dict(color="#1f77b4", width=2)))
         fig.add_trace(go.Scatter(
-            x=list(range(1,years+1))+list(range(years,0,-1)),
-            y=list(p95)+list(p5[::-1]),
-            fill="toself", opacity=0.2, name="Banda 5–95%"
+            x=x_axis + x_axis[::-1],
+            y=list(p95) + list(p5[::-1]),
+            fill="toself",
+            fillcolor="rgba(31, 119, 180, 0.2)",
+            line=dict(color="rgba(255,255,255,0)"),
+            name="Banda 5–95%"
         ))
+
+        fig.update_layout(
+            title="Proiezione Monte Carlo del Portafoglio",
+            xaxis_title="Anno",
+            yaxis_title="Valore (€)",
+            template="plotly_white"
+        )
+
         st.plotly_chart(fig, use_container_width=True)
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
