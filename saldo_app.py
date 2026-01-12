@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 st.image(logo, width=260)
-st.markdown("<h1 style='text-align:center;'>📊 Risk Situation Room</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>📊 FinEdu Financial Analysis Tool</h1>", unsafe_allow_html=True)
 
 # ======================================
 # LOGIN
@@ -373,6 +373,7 @@ if "returns_df" in st.session_state:
 
 else:
     st.info("Costruisci prima il portafoglio")
+
 
 
 
