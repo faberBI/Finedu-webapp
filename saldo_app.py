@@ -195,13 +195,13 @@ if df is not None:
         use_container_width=True
     )
 
-        # ======================================
+    # ======================================
     # 🎯 OBIETTIVI DI RISPARMIO (ANNUALI + MENSILI)
     # ======================================
     st.header("🎯 Obiettivi di Risparmio")
     st.markdown("Imposta i tuoi obiettivi finanziari e monitora il progresso")
     
-    # --- INPUT TARGET ANNUALI ---
+    # --- INPUT TARGET UNICO ---
     goals = {
         "🛟 Fondo Emergenza": st.number_input("Target Fondo Emergenza (€)", 0, 200000, 10000, step=1000),
         "✈️ Vacanze": st.number_input("Target Vacanze (€)", 0, 50000, 3000, step=500),
@@ -212,14 +212,13 @@ if df is not None:
     allocazione_annua = saldo if saldo > 0 else 0
     risparmio_medio = allocazione_annua / 12 if allocazione_annua > 0 else 0
     
-    st.subheader("📆 Obiettivi Mensili (Gauge)")
-    
-    # Mostra i gauge per ciascun obiettivo
+    # --- GAUGE MENSILI ---
+    st.subheader("📆 Obiettivi Mensili")
     for nome, target_annuale in goals.items():
-        target_mensile = target_annuale / 12 if target_annuale > 0 else 1  # protezione divisione per zero
+        target_mensile = target_annuale / 12 if target_annuale > 0 else 1
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
-            value=min(risparmio_medio, target_mensile),  # evita che gauge superi il massimo
+            value=min(risparmio_medio, target_mensile),
             title={'text': f"{nome} – target mensile €{target_mensile:,.0f}"},
             gauge={
                 'axis': {'range': [0, target_mensile]},
@@ -229,7 +228,7 @@ if df is not None:
         ))
         st.plotly_chart(fig, use_container_width=True)
     
-    # --- CALCOLO PROGRESSO ANNUALE ---
+    # --- PROGRESSO ANNUALE ---
     goal_rows = []
     for nome, target_annuale in goals.items():
         progress = min(allocazione_annua / target_annuale * 100, 100) if target_annuale > 0 else 0
@@ -249,8 +248,8 @@ if df is not None:
             "🚦 Stato": status
         })
     
-    # Mostra tabella con progress bar
     goals_df = pd.DataFrame(goal_rows)
+    
     st.subheader("📊 Stato Obiettivi Annuali")
     st.dataframe(
         goals_df,
@@ -263,7 +262,9 @@ if df is not None:
                 max_value=100,
                 format="%.0f%%"
             )
-        })
+        }
+    )
+
     
    
     # ======================================
@@ -459,6 +460,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
