@@ -360,7 +360,7 @@ if tickers:
         st.subheader("⚠️ Worst Contributors")
         st.dataframe(bottom, use_container_width=True)
 
-        st.subheader("⚠️ Worst Contributors")
+        st.subheader("Analisi di correlazione")
         hhi = np.sum(weights**2)
         st.write(f"Il portafoglio si comporta come se avesse {1/hhi} asset indipendenti")
         
@@ -488,6 +488,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
