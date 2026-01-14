@@ -20,7 +20,6 @@ def send_email(to_email, subject, body):
     msg['From'] = EMAIL_ADDRESS
     msg['To'] = to_email
     msg['Subject'] = subject
-
     msg.attach(MIMEText(body, 'plain'))
 
     try:
@@ -29,8 +28,9 @@ def send_email(to_email, subject, body):
             server.send_message(msg)
         return True
     except Exception as e:
-        print(e)
+        print("Errore invio email:", e)  # Mostra l’errore reale
         return False
+
 
 def hash_password(pwd):
     return hashlib.sha256(pwd.encode()).hexdigest()
