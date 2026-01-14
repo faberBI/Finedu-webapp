@@ -300,7 +300,7 @@ if df is not None:
         st.plotly_chart(px.pie(spese_tipologia.reset_index(), names="Tipologia", values="Totale"),
                          use_container_width=True)
         
-    st.header("🔥 Heatmap Top Spese Mensili")
+    st.header("🔥 Analisi Top Spese Mensili")
 
     top_n = 5  # quante spese principali mostrare per mese
     top_spese_mensili = []
@@ -329,6 +329,11 @@ if df is not None:
             title=f"Top {top_n} Spese Mensili",
             labels={"Importo (€)": "Importo (€)"}
         )
+        fig.update_traces(
+            marker_line_width=0,  
+            width=0.6,           
+            textposition="auto"
+            )
         fig.update_layout(
             xaxis_title="Mese",
             yaxis_title="Importo (€)",
@@ -593,6 +598,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
