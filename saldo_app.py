@@ -37,9 +37,19 @@ from utils.portfolio_utils import (
     create_excel_report_investimento,
     calculate_returns,
     portfolio_top_bottom,
-    portfolio_suggestions
+    build_decision_dataframe,
+    kpi_card
 )
 
+COLORS = {
+    "bg": "#ffffff",
+    "text": "#111111",
+    "muted": "#6e6e73",
+    "green": "#34C759",
+    "red": "#FF3B30",
+    "orange": "#FF9500",
+    "neutral": "#E5E5EA"
+}
 
 # ======================================
 # CONFIGURAZIONE PAGINA
@@ -354,6 +364,7 @@ if tickers:
         st.plotly_chart(plot_weights(weights, tickers), use_container_width=True)
         st.plotly_chart(plot_risk_contribution(weights, returns), use_container_width=True)
         df_all, top, bottom = portfolio_top_bottom(weights, returns)
+        df_decision = build_decision_dataframe(df_all)
         
         st.subheader("🏆 Top Contributors")
         st.dataframe(top, use_container_width=True)
@@ -365,12 +376,76 @@ if tickers:
         hhi = np.sum(weights**2)
         st.write(f"Il portafoglio si comporta come se avesse {1/hhi} asset indipendenti")
         
+        fig = px.scatter(
+            df_decision,
+            x="Efficienza",
+            y="Contributo Rendimento",
+            size="Risk %",
+            color="Action",
+            hover_name="Asset",
+            size_max=36,
+            color_discrete_map={
+                "Aumentare": COLORS["green"],
+                "Ridurre": COLORS["red"],
+                "Monitorare": COLORS["orange"],
+                "Neutrale": COLORS["neutral"]
+            }
+        )
         
-        st.subheader("🤖 Insight from data")
-        suggestions = portfolio_suggestions(df_contrib=df_all, corr_matrix=metrics["Correlation Matrix"],risk_threshold=0.25)
-        for s in suggestions:
-            st.write(s)
+        fig.update_layout(
+            paper_bgcolor=COLORS["bg"],
+            plot_bgcolor=COLORS["bg"],
+            font=dict(color=COLORS["text"], size=14),
+            title=dict(
+                text="Portfolio Decision Map",
+                x=0.02,
+                font=dict(size=22)
+            ),
+            margin=dict(l=30, r=30, t=60, b=30),
+            legend_title_text=""
+        )
+        
+        fig.update_traces(marker=dict(opacity=0.85, line=dict(width=0)))
+        fig.update_xaxes(showgrid=False, title="Efficienza rischio / rendimento")
+        fig.update_yaxes(showgrid=True, gridcolor="#F2F2F7", title="Contributo al rendimento")
+        st.plotly_chart(fig, use_container_width=True)
 
+        c1, c2, c3 = st.columns(3)       
+        kpi_card("🔺 Aumentare", len(df_decision[df_decision["Action"]=="Aumentare"]),
+                 "asset efficienti", COLORS["green"])
+        
+        kpi_card("🔻 Ridurre", len(df_decision[df_decision["Action"]=="Ridurre"]),
+                 "asset sotto-performanti", COLORS["red"])
+        
+        kpi_card("⚠️ Rischio max",
+                 f"{df_decision['Risk %'].max():.0f}%",
+                 "concentrazione portafoglio",
+                 COLORS["orange"])
+        st.subheader("🤖 Asset Insight")
+        for _, r in df_decision.sort_values("Risk %", ascending=False).iterrows():
+            color = {
+                "Aumentare": COLORS["green"],
+                "Ridurre": COLORS["red"],
+                "Monitorare": COLORS["orange"],
+                "Neutrale": COLORS["muted"]
+            }[r["Action"]]
+        
+            st.markdown(f"""
+            <div style="
+                padding:14px 18px;
+                border-radius:14px;
+                margin-bottom:10px;
+                background:#F9F9FB;
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+            ">
+                <strong>{r['Asset']}</strong>
+                <span style="color:{color}; font-weight:600;">
+                    {r['Action']}
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
     # ======================================
     # 3. MONTE CARLO
     # ======================================
@@ -489,6 +564,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
