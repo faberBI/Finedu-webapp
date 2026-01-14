@@ -299,7 +299,7 @@ if df is not None:
     with c2:
         st.plotly_chart(px.pie(spese_tipologia.reset_index(), names="Tipologia", values="Totale"),
                          use_container_width=True)
-
+        
     st.header("🔥 Heatmap Top Spese Mensili")
 
     top_n = 5  # quante spese principali mostrare per mese
@@ -309,22 +309,25 @@ if df is not None:
         df_uscite = df[df["Tipo"]=="Uscite"][["Tipologia","Dettaglio", m]].copy()
         df_uscite[m] = pd.to_numeric(df_uscite[m], errors="coerce").fillna(0.0)
         top_spese = df_uscite.sort_values(by=m, ascending=False).head(top_n)
-        top_spese['Mese'] = m.capitalize()
-        top_spese_mensili.append(top_spese)
+        if not top_spese.empty:
+            top_spese = top_spese.rename(columns={m: "Importo (€)"})
+            top_spese['Mese'] = m.capitalize()
+            top_spese_mensili.append(top_spese)
 
-    top_spese_df = pd.concat(top_spese_mensili)
+    # Concateno tutte le top spese in un unico dataframe
+    top_spese_df = pd.concat(top_spese_mensili, ignore_index=True)
 
     if not top_spese_df.empty:
         fig = px.bar(
             top_spese_df,
             x="Mese",
-            y=top_n * ["Importo (€)"] if "Importo (€)" not in top_spese_df.columns else top_spese_df.columns[-2],
+            y="Importo (€)",
             color="Tipologia",
-            hover_data=["Dettaglio", top_spese_df.columns[-2]],
-            text=top_spese_df.columns[-2],
+            text="Importo (€)",
+            hover_data=["Dettaglio"],
             barmode="group",
             title=f"Top {top_n} Spese Mensili",
-            labels={top_spese_df.columns[-2]: "Importo (€)"}
+            labels={"Importo (€)": "Importo (€)"}
         )
         fig.update_layout(
             xaxis_title="Mese",
@@ -590,6 +593,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
