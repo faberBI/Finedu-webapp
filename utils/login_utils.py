@@ -25,3 +25,16 @@ def send_email(to_email, subject, body):
     except Exception as e:
         print(e)
         return False
+
+def hash_password(pwd):
+    return hashlib.sha256(pwd.encode()).hexdigest()
+
+def load_users():
+    if Path("users.json").exists():
+        with open("users.json") as f:
+            return json.load(f)
+    return {}
+
+def save_users(users):
+    with open("users.json", "w") as f:
+        json.dump(users, f, indent=4)
