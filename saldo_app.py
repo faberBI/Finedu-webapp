@@ -599,6 +599,16 @@ if tickers:
     else:
         st.info("Costruisci prima il portafoglio")
 
+st.sidebar.markdown("---")  # separatore
+st.sidebar.header("📬 Contatti")
+st.sidebar.markdown(
+    """
+    💼 LinkedIn: [FinEdu LinkedIn](https://www.linkedin.com/company/finedu-it/posts/?feedView=all)
+    ▶️ YouTube: [YouTube](https://m.youtube.com/channel/UC0ncRVRMkQeQRhw1FgtytvQ)
+    📸 Instagram (📸): [Finvest_eu](https://www.instagram.com/finedu_it/)
+    """
+)
+
 
 
 
