@@ -36,7 +36,8 @@ from utils.portfolio_utils import (
     simulate_t_copula,
     create_excel_report_investimento,
     calculate_returns,
-    portfolio_top_bottom
+    portfolio_top_bottom,
+    portfolio_suggestions
 )
 
 
@@ -488,6 +489,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
