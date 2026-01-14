@@ -300,64 +300,44 @@ if df is not None:
         st.plotly_chart(px.pie(spese_tipologia.reset_index(), names="Tipologia", values="Totale"),
                          use_container_width=True)
 
-    st.header("🔥 Heatmap Top Spese Mensili + Totale Mensile")
-    
-    top_n = 5  # quante spese principali considerare per heatmap
-    
-    # Creo un dataframe per la heatmap
-    heatmap_df = pd.DataFrame(0, index=[], columns=MONTHS)
-    
-    # Ciclo sui mesi e seleziono le top spese
+    st.header("🔥 Heatmap Top Spese Mensili")
+
+    top_n = 5  # quante spese principali mostrare per mese
+    top_spese_mensili = []
+
     for m in MONTHS:
-        df_uscite = df[df["Tipo"]=="Uscite"][["Dettaglio", m]].copy()
+        df_uscite = df[df["Tipo"]=="Uscite"][["Tipologia","Dettaglio", m]].copy()
         df_uscite[m] = pd.to_numeric(df_uscite[m], errors="coerce").fillna(0.0)
         top_spese = df_uscite.sort_values(by=m, ascending=False).head(top_n)
-        for _, row in top_spese.iterrows():
-            det = row["Dettaglio"]
-            if det not in heatmap_df.index:
-                heatmap_df.loc[det] = 0
-            heatmap_df.at[det, m] = row[m]
-    
-    totale_mensile = df[df["Tipo"]=="Uscite"][MONTHS].sum()
-        
-    fig = go.Figure()
-    
-    # Barre cumulative mensili
-    fig.add_trace(
-        go.Bar(
-            x=[m.capitalize() for m in MONTHS],
-            y=totale_mensile.values,
-            name="Totale Mensile",
-            marker_color="rgba(100,100,100,0.3)",
-            text=totale_mensile.values,
-            textposition="outside"
-        )
-    )
-    
-    # Heatmap delle top spese
-    fig.add_trace(
-        go.Heatmap(
-            z=heatmap_df.values,
-            x=[m.capitalize() for m in MONTHS],
-            y=heatmap_df.index,
-            colorscale="Reds",
-            colorbar=dict(title="€"),
-            hovertemplate='Spesa: %{y}<br>Mese: %{x}<br>Importo: €%{z}<extra></extra>'
-        )
-    )
-    
-    fig.update_layout(
-        title=f"Top {top_n} Spese Mensili con Totale Mensile",
-        xaxis_title="Mese",
-        yaxis_title="Dettaglio Spesa",
-        yaxis_autorange="reversed",
-        barmode="overlay",
-        template="plotly_white",
-        height=600
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+        top_spese['Mese'] = m.capitalize()
+        top_spese_mensili.append(top_spese)
 
+    top_spese_df = pd.concat(top_spese_mensili)
+
+    if not top_spese_df.empty:
+        fig = px.bar(
+            top_spese_df,
+            x="Mese",
+            y=top_n * ["Importo (€)"] if "Importo (€)" not in top_spese_df.columns else top_spese_df.columns[-2],
+            color="Tipologia",
+            hover_data=["Dettaglio", top_spese_df.columns[-2]],
+            text=top_spese_df.columns[-2],
+            barmode="group",
+            title=f"Top {top_n} Spese Mensili",
+            labels={top_spese_df.columns[-2]: "Importo (€)"}
+        )
+        fig.update_layout(
+            xaxis_title="Mese",
+            yaxis_title="Importo (€)",
+            legend_title="Tipologia",
+            uniformtext_minsize=8,
+            uniformtext_mode="hide",
+            template="plotly_white",
+            height=500
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Nessuna spesa registrata.")
 # ======================================
 # 2. COSTRUZIONE PORTAFOGLIO
 # ======================================
@@ -610,6 +590,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
