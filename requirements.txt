@@ -31,5 +31,9 @@ xlrd
 # Genera PDF
 fpdf2
 
+# Gestione Ambiente
+python-dotenv
+
+
 
 
