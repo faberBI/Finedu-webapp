@@ -36,16 +36,47 @@ def send_email(to_email, subject, body):
 #        return False
 
 
+#def hash_password(pwd):
+ #   return hashlib.sha256(pwd.encode()).hexdigest()
+
+#def load_users():
+#    if os.path.exists("users.json"):
+#        with open("users.json") as f:
+#            return json.load(f)
+#    return {}
+
+
+#def save_users(users):
+#    with open("users.json", "w") as f:
+#        json.dump(users, f, indent=4)
+
+
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+
+# Autenticazione
+scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/drive']
+creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
+client = gspread.authorize(creds)
+
+# Apri sheet
+sheet = client.open("FinEdu Users").sheet1
+
+# -----------------------------
+# Funzioni utili
+# -----------------------------
 def hash_password(pwd):
     return hashlib.sha256(pwd.encode()).hexdigest()
 
 def load_users():
-    if os.path.exists("users.json"):
-        with open("users.json") as f:
-            return json.load(f)
-    return {}
+    users = {}
+    rows = sheet.get_all_records()  # lista di dizionari
+    for row in rows:
+        users[row['Username']] = {"password": row['Password'], "email": row['Email']}
+    return users
 
+def save_user(username, password_hash, email):
+    # Aggiunge una nuova riga
+    sheet.append_row([username, password_hash, email])
 
-def save_users(users):
-    with open("users.json", "w") as f:
-        json.dump(users, f, indent=4)
