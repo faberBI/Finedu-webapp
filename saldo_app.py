@@ -302,7 +302,7 @@ if df is not None:
         
     st.header("🔥 Analisi Top Spese Mensili")
 
-    top_n = 5  # quante spese principali mostrare per mese
+    top_n = 3  # quante spese principali mostrare per mese
     top_spese_mensili = []
 
     for m in MONTHS:
@@ -598,6 +598,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
