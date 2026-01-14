@@ -1,8 +1,14 @@
+import streamlit as st
+import hashlib
+import json
+import os          
+from pathlib import Path 
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
-import os
+import random, string
+
 
 load_dotenv()
 
@@ -30,10 +36,11 @@ def hash_password(pwd):
     return hashlib.sha256(pwd.encode()).hexdigest()
 
 def load_users():
-    if Path("users.json").exists():
+    if os.path.exists("users.json"):
         with open("users.json") as f:
             return json.load(f)
     return {}
+
 
 def save_users(users):
     with open("users.json", "w") as f:
