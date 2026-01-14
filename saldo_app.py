@@ -23,6 +23,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 import os
+from pathlib import Path
+
 
 from utils.portfolio_utils import (
     download_data_robust,
@@ -678,6 +680,7 @@ st.sidebar.markdown(
     📸 Instagram: [Finvest_eu](https://www.instagram.com/finedu_it/)
     """
 )
+
 
 
 
