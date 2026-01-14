@@ -365,6 +365,14 @@ if tickers:
         st.subheader("Analisi di correlazione")
         hhi = np.sum(weights**2)
         st.write(f"Il portafoglio si comporta come se avesse {1/hhi} asset indipendenti")
+        COLORS = {
+            "bg": "#ffffff",
+            "text": "#111111",
+            "muted": "#6e6e73",
+            "green": "#34C759",
+            "red": "#FF3B30",
+            "orange": "#FF9500",
+            "neutral": "#E5E5EA"}
         
         fig = px.scatter(
             df_decision,
@@ -408,14 +416,6 @@ if tickers:
         kpi_card("⚠️ Rischio max", f"{df_decision['Risk %'].max():.0f}%", "concentrazione portafoglio", COLORS["orange"])
         
         st.subheader("🤖 Asset Insight")
-        COLORS = {
-        "bg": "#ffffff",
-        "text": "#111111",
-        "muted": "#6e6e73",
-        "green": "#34C759",
-        "red": "#FF3B30",
-        "orange": "#FF9500",
-        "neutral": "#E5E5EA"}
         for _, r in df_decision.sort_values("Risk %", ascending=False).iterrows():
             color = {
                 "Aumentare": COLORS["green"],
@@ -558,6 +558,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
