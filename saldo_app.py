@@ -24,6 +24,8 @@ from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 import os
 from pathlib import Path
+import random
+import string
 
 
 from utils.portfolio_utils import (
@@ -702,6 +704,7 @@ st.sidebar.markdown(
     📸 Instagram: [Finvest_eu](https://www.instagram.com/finedu_it/)
     """
 )
+
 
 
 
