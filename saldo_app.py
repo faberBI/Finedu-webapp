@@ -35,7 +35,8 @@ from utils.portfolio_utils import (
     plot_contribution,
     simulate_t_copula,
     create_excel_report_investimento,
-    calculate_returns
+    calculate_returns,
+    portfolio_top_bottom
 )
 
 
@@ -351,6 +352,23 @@ if tickers:
         st.plotly_chart(plot_efficient_frontier(returns, n_portfolios=5000, risk_free=0.02), use_container_width=True)
         st.plotly_chart(plot_weights(weights, tickers), use_container_width=True)
         st.plotly_chart(plot_risk_contribution(weights, returns), use_container_width=True)
+        df_all, top, bottom = portfolio_top_bottom(weights, returns)
+        
+        st.subheader("🏆 Top Contributors")
+        st.dataframe(top, use_container_width=True)
+
+        st.subheader("⚠️ Worst Contributors")
+        st.dataframe(bottom, use_container_width=True)
+
+        st.subheader("⚠️ Worst Contributors")
+        hhi = np.sum(weights**2)
+        st.write(f"Il portafoglio si comporta come se avesse {1/hhi} asset indipendenti")
+        
+        
+        st.subheader("🤖 Insight from data")
+        suggestions = portfolio_suggestions(df_contrib=df_all, corr_matrix=metrics["Correlation Matrix"],risk_threshold=0.25)
+        for s in suggestions:
+            st.write(s)
 
     # ======================================
     # 3. MONTE CARLO
@@ -470,6 +488,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
