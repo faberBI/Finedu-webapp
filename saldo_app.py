@@ -605,9 +605,10 @@ st.sidebar.markdown(
     """
     💼 LinkedIn: [FinEdu LinkedIn](https://www.linkedin.com/company/finedu-it/posts/?feedView=all)
     ▶️ YouTube: [YouTube](https://m.youtube.com/channel/UC0ncRVRMkQeQRhw1FgtytvQ)
-    📸 Instagram (📸): [Finvest_eu](https://www.instagram.com/finedu_it/)
+    📸 Instagram: [Finvest_eu](https://www.instagram.com/finedu_it/)
     """
 )
+
 
 
 
