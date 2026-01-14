@@ -45,17 +45,9 @@ from utils.portfolio_utils import (
 # ======================================
 # CONFIGURAZIONE PAGINA
 # ======================================
-logo = Image.open("Image/157214392_891863794931335_5614608524370432599_n.jpg")
-
-st.set_page_config(
-    page_title="📊 FinEdu Financial Analysis Tool",
-    page_icon=logo,
-    layout="wide"
-)
-
-st.markdown(f"""
+st.markdown("""
 <div style="text-align: center;">
-    <img src="{logo}" width="260">
+    <img src="Image/157214392_891863794931335_5614608524370432599_n.jpg" width="260">
     <h1>📊 FinEdu Financial Analysis Tool</h1>
 </div>
 """, unsafe_allow_html=True)
@@ -614,6 +606,7 @@ st.sidebar.markdown(
     📸 Instagram: [Finvest_eu](https://www.instagram.com/finedu_it/)
     """
 )
+
 
 
 
