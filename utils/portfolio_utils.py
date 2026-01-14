@@ -2,6 +2,17 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import plotly.express as px
+import streamlit as st
+
+COLORS = {
+    "bg": "#ffffff",
+    "text": "#111111",
+    "muted": "#6e6e73",
+    "green": "#34C759",
+    "red": "#FF3B30",
+    "orange": "#FF9500",
+    "neutral": "#E5E5EA"}
+
 
 # =========================
 # 1️⃣ Download dati storici
@@ -502,6 +513,7 @@ def kpi_card(title, value, subtitle, color):
         <p style="color:{COLORS['muted']};">{subtitle}</p>
     </div>
     """, unsafe_allow_html=True)
+
 
 
 
