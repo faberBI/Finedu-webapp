@@ -74,21 +74,36 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-USERS = load_users()
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # ======================================
-# SESSION STATE
+# GOOGLE SHEETS SETUP
 # ======================================
+scope = ["https://spreadsheets.google.com/feeds",
+         'https://www.googleapis.com/auth/drive']
+
+creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
+client = gspread.authorize(creds)
+
+sheet = client.open("FinEdu Users").sheet1  # nome del tuo foglio
+
+# --------------------------------------
+# SESSION STATE
+# --------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# ======================================
+# --------------------------------------
 # SIDEBAR LOGIN / REGISTRAZIONE
-# ======================================
+# --------------------------------------
 st.sidebar.title("🔐 Login / Registrazione")
 mode = st.sidebar.radio("Seleziona modalità", ["Login", "Crea account", "Password dimenticata?"])
+
+# Carica utenti da Sheets
+USERS = load_users()
 
 # --------------------
 # LOGIN
@@ -98,15 +113,10 @@ if mode == "Login":
     password = st.sidebar.text_input("Password", type="password")
     if st.sidebar.button("Login"):
         user_data = USERS.get(username)
-        if user_data:
-            # Compatibilità vecchio formato (stringa) o nuovo formato (dict con password)
-            stored_hash = user_data if isinstance(user_data, str) else user_data.get("password")
-            if stored_hash == hash_password(password):
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.success(f"Benvenuto {username}!")
-            else:
-                st.sidebar.error("Credenziali errate")
+        if user_data and user_data['password'] == hash_password(password):
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.success(f"Benvenuto {username}!")
         else:
             st.sidebar.error("Credenziali errate")
     if not st.session_state.logged_in:
@@ -129,51 +139,26 @@ elif mode == "Crea account":
         elif new_password != confirm_password:
             st.sidebar.error("Le password non corrispondono")
         else:
-            # Salva utente nel nuovo formato
-            USERS[new_username] = {"password": hash_password(new_password), "email": email_user}
-            save_users(USERS)
-
-            # Invio email con credenziali
-            body = (
-                f"Ciao {new_username},\n\n"
-                f"Il tuo account è stato creato con successo.\n"
-                f"Username: {new_username}\n"
-                f"Password: {new_password}"
-            )
-            if send_email(email_user, "Nuovo account FinEdu", body):
-                st.sidebar.success("Account creato! Controlla la tua email.")
-            else:
-                st.sidebar.warning("Account creato, ma non è stato possibile inviare l'email.")
+            # Salva utente direttamente su Google Sheets
+            save_user(new_username, hash_password(new_password), email_user)
+            st.success(f"Account {new_username} creato con successo!")
 
 # --------------------
 # PASSWORD DIMENTICATA
 # --------------------
 elif mode == "Password dimenticata?":
     username_email = st.sidebar.text_input("Inserisci il tuo Username")
-    if st.sidebar.button("Invia nuova password"):
+    if st.sidebar.button("Genera nuova password"):
         user_data = USERS.get(username_email)
         if user_data:
-            # Compatibilità vecchio formato
-            if isinstance(user_data, str):
-                st.sidebar.warning(
-                    "Non è possibile inviare la password via email: aggiorna il tuo account con un'email valida."
-                )
-            else:
-                # Genera nuova password casuale
-                new_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-                USERS[username_email]["password"] = hash_password(new_pass)
-                save_users(USERS)
-
-                email_to_send = USERS[username_email]["email"]
-                body = (
-                    f"Ciao {username_email},\n\n"
-                    f"La tua nuova password è: {new_pass}\n"
-                    f"Ti consigliamo di cambiarla subito dopo il login."
-                )
-                if send_email(email_to_send, "Recupero password FinEdu", body):
-                    st.sidebar.success("Nuova password inviata via email!")
-                else:
-                    st.sidebar.error("Errore nell'invio dell'email.")
+            # Genera nuova password casuale
+            new_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            
+            # Aggiorna password nel Google Sheet
+            cell = sheet.find(username_email)
+            sheet.update_cell(cell.row, 2, hash_password(new_pass))  # colonna Password
+            
+            st.success(f"Nuova password generata: {new_pass}\nCambia la password al prossimo login.")
         else:
             st.sidebar.error("Username non registrato.")
     st.stop()
@@ -704,6 +689,7 @@ st.sidebar.markdown(
     📸 Instagram: [Finvest_eu](https://www.instagram.com/finedu_it/)
     """
 )
+
 
 
 
