@@ -449,6 +449,44 @@ def create_excel_report_investimento(saldo_annuale, metrics=None, df_pct=None, r
     
     return excel_bytes
 
+def portfolio_top_bottom(weights, returns_df, top_n=3):
+    mean_returns = returns_df.mean() * 252
+    cov_matrix = returns_df.cov() * 252
+
+    port_vol = np.sqrt(weights.T @ cov_matrix @ weights)
+    mcr = cov_matrix @ weights / port_vol
+
+    contrib_return = weights * mean_returns
+    contrib_vol = weights * mcr
+    efficiency = contrib_return / contrib_vol
+
+    df = pd.DataFrame({
+        "Asset": returns_df.columns,
+        "Contributo Rendimento": contrib_return,
+        "Contributo Volatilità": contrib_vol,
+        "Efficienza": efficiency
+    }).sort_values("Contributo Rendimento", ascending=False)
+
+    top = df.head(top_n)
+    bottom = df.tail(top_n)
+
+    return df, top, bottom
+
+def portfolio_suggestions(df_contrib, corr_matrix, risk_threshold=0.25):
+    suggestions = []
+
+    total_risk = df_contrib["Contributo Volatilità"].sum()
+
+    for _, r in df_contrib.iterrows():
+        if r["Contributo Rendimento"] < 0:
+            suggestions.append(f"🔻 Ridurre {r['Asset']}: rendimento negativo")
+        elif r["Contributo Volatilità"] / total_risk > risk_threshold:
+            suggestions.append(f"⚠️ {r['Asset']} pesa troppo sul rischio")
+        elif r["Efficienza"] > 1:
+            suggestions.append(f"🔺 Aumentare {r['Asset']}: ottima efficienza")
+
+    return suggestions
+
 
 
 
