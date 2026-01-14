@@ -53,8 +53,12 @@ st.set_page_config(
     layout="wide"
 )
 
-st.image(logo, width=260)
-st.markdown("<h1 style='text-align:center;'>📊 FinEdu Financial Analysis Tool</h1>", unsafe_allow_html=True)
+st.markdown(f"""
+<div style="text-align: center;">
+    <img src="{logo}" width="260">
+    <h1>📊 FinEdu Financial Analysis Tool</h1>
+</div>
+""", unsafe_allow_html=True)
 
 # ======================================
 # LOGIN
@@ -610,6 +614,7 @@ st.sidebar.markdown(
     📸 Instagram: [Finvest_eu](https://www.instagram.com/finedu_it/)
     """
 )
+
 
 
 
