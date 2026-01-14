@@ -331,7 +331,7 @@ if df is not None:
         )
         fig.update_traces(
             marker_line_width=0,  
-            width=0.6,           
+            width=0.8,           
             textposition="auto"
             )
         fig.update_layout(
@@ -598,6 +598,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
