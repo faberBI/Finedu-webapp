@@ -18,6 +18,10 @@ from scipy.stats import t as student_t
 from scipy.stats import norm
 import numpy as np
 import yfinance as yf
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 
 from utils.portfolio_utils import (
     download_data_robust,
@@ -41,7 +45,12 @@ from utils.portfolio_utils import (
     kpi_card,
     COLORS
     )
+from utils.login_utils import (send_email, hash_password, load_users, save_users)
 
+load_dotenv()
+
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 # ======================================
 # CONFIGURAZIONE PAGINA
 # ======================================
@@ -60,34 +69,88 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+USERS = load_users()
+
 # ======================================
-# LOGIN
+# SESSION STATE
 # ======================================
-st.sidebar.title("🔐 Login")
-
-def hash_password(pwd):
-    return hashlib.sha256(pwd.encode()).hexdigest()
-
-try:
-    with open("users.json") as f:
-        USERS = json.load(f)
-except:
-    USERS = {}
-
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
-if not st.session_state.logged_in:
-    u = st.sidebar.text_input("Username")
-    p = st.sidebar.text_input("Password", type="password")
+# ======================================
+# SIDEBAR LOGIN / REGISTRAZIONE
+# ======================================
+st.sidebar.title("🔐 Login / Registrazione")
+
+mode = st.sidebar.radio("Seleziona modalità", ["Login", "Crea account", "Password dimenticata?"])
+
+# --------------------
+# LOGIN
+# --------------------
+if mode == "Login":
+    username = st.sidebar.text_input("Username")
+    password = st.sidebar.text_input("Password", type="password")
     if st.sidebar.button("Login"):
-        if USERS.get(u) == hash_password(p):
+        if USERS.get(username) and USERS[username]["password"] == hash_password(password):
             st.session_state.logged_in = True
-            st.rerun()
+            st.session_state.username = username
+            st.experimental_rerun()
         else:
             st.sidebar.error("Credenziali errate")
-    st.stop()
+    if not st.session_state.logged_in:
+        st.stop()
 
+# --------------------
+# CREAZIONE ACCOUNT
+# --------------------
+elif mode == "Crea account":
+    new_username = st.sidebar.text_input("Nuovo Username")
+    email_user = st.sidebar.text_input("Email")
+    new_password = st.sidebar.text_input("Nuova Password", type="password")
+    confirm_password = st.sidebar.text_input("Conferma Password", type="password")
+
+    if st.sidebar.button("Registrati"):
+        if not new_username or not new_password or not email_user:
+            st.sidebar.error("Compila tutti i campi")
+        elif new_username in USERS:
+            st.sidebar.error("Username già esistente")
+        elif new_password != confirm_password:
+            st.sidebar.error("Le password non corrispondono")
+        else:
+            # Salva utente
+            USERS[new_username] = {"password": hash_password(new_password), "email": email_user}
+            save_users(USERS)
+
+            # Invio email
+            body = f"Ciao {new_username},\n\nIl tuo account è stato creato con successo.\nUsername: {new_username}\nPassword: {new_password}"
+            if send_email(email_user, "Nuovo account FinEdu", body):
+                st.sidebar.success("Account creato! Controlla la tua email.")
+            else:
+                st.sidebar.warning("Account creato, ma non è stato possibile inviare l'email.")
+
+# --------------------
+# PASSWORD DIMENTICATA
+# --------------------
+elif mode == "Password dimenticata?":
+    username_email = st.sidebar.text_input("Inserisci il tuo Username")
+    if st.sidebar.button("Invia nuova password"):
+        if username_email in USERS:
+            # Genera nuova password casuale
+            new_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            USERS[username_email]["password"] = hash_password(new_pass)
+            save_users(USERS)
+
+            email_to_send = USERS[username_email]["email"]
+            body = f"Ciao {username_email},\n\nLa tua nuova password è: {new_pass}\nTi consigliamo di cambiarla dopo il login."
+            if send_email(email_to_send, "Recupero password FinEdu", body):
+                st.sidebar.success("Nuova password inviata via email!")
+            else:
+                st.sidebar.error("Errore nell'invio dell'email.")
+        else:
+            st.sidebar.error("Username non registrato.")
+    st.stop()
 # ======================================
 # APP
 # ======================================
@@ -614,6 +677,7 @@ st.sidebar.markdown(
     📸 Instagram: [Finvest_eu](https://www.instagram.com/finedu_it/)
     """
 )
+
 
 
 
