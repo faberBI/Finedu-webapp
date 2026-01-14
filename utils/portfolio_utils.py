@@ -472,20 +472,36 @@ def portfolio_top_bottom(weights, returns_df, top_n=3):
 
     return df, top, bottom
 
-def portfolio_suggestions(df_contrib, corr_matrix, risk_threshold=0.25):
-    suggestions = []
+def build_decision_dataframe(df_contrib, risk_threshold=25):
+    df = df_contrib.copy()
 
-    total_risk = df_contrib["Contributo Volatilità"].sum()
+    total_risk = df["Contributo Volatilità"].sum()
+    df["Risk %"] = df["Contributo Volatilità"] / total_risk * 100
 
-    for _, r in df_contrib.iterrows():
-        if r["Contributo Rendimento"] < 0:
-            suggestions.append(f"🔻 Ridurre {r['Asset']}: rendimento negativo")
-        elif r["Contributo Volatilità"] / total_risk > risk_threshold:
-            suggestions.append(f"⚠️ {r['Asset']} pesa troppo sul rischio")
-        elif r["Efficienza"] > 1:
-            suggestions.append(f"🔺 Aumentare {r['Asset']}: ottima efficienza")
+    df["Action"] = np.select(
+        [
+            df["Contributo Rendimento"] < 0,
+            df["Risk %"] > risk_threshold,
+            df["Efficienza"] > 1
+        ],
+        [
+            "Ridurre",
+            "Monitorare",
+            "Aumentare"
+        ],
+        default="Neutrale"
+    )
 
-    return suggestions
+    return df
+
+def kpi_card(title, value, subtitle, color):
+    st.markdown(f"""
+    <div class="metric-box">
+        <h3>{title}</h3>
+        <h1 style="color:{color}; margin:0;">{value}</h1>
+        <p style="color:{COLORS['muted']};">{subtitle}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 
