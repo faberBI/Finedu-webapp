@@ -39,7 +39,7 @@ from utils.portfolio_utils import (
     portfolio_top_bottom,
     build_decision_dataframe,
     kpi_card
-)
+    )
 
 COLORS = {
     "bg": "#ffffff",
@@ -564,6 +564,7 @@ if tickers:
     
     else:
         st.info("Costruisci prima il portafoglio")
+
 
 
 
