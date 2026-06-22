@@ -1,8 +1,6 @@
 {
     "Giulia": {"password": "fd9d4ddf292f23b5c1d79ea730c260ba190ce6f20e1dd4001c7627ac65b76345", "email": "giulia@email.com"},
     "Fabrizio": {"password": "81416c086ee2284aa4c00e6500f9b4ebd784b638f2a239bbbc791f4f45a71613", "email": "fabrizio@email.com"},
-    "Utente": {"password": "44a140877e6fa29d86f4938fdb45b791089379e7266dbeb95701beadda8c0f08", "email": "utente@email.com"},
-    "Utente_1": {"password": "e7000b89404b53e6c3c56ab26afc9f49577d339b1b3dc1ec5c13a157703aba0b" ,"email": "utente@email.com"},
-    "Utente_2": {"password": "e7000b89404b53e6c3c56ab26afc9f49577d339b1b3dc1ec5c13a157703aba0b","email": "utente@email.com"}
+    "Utente_1": {"password": "e7000b89404b53e6c3c56ab26afc9f49577d339b1b3dc1ec5c13a157703aba0b" ,"email": "utente@email.com"}
 }
 
